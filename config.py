@@ -6,3 +6,4 @@
 # @Last modified time: 20_Oct_2017
 
 NUM_SIMULATIONS = 1600
+TEMPERATURE = 1

@@ -3,7 +3,7 @@
 # @Email:  yu.chen@pku.edu.cn
 # @Filename: __play__.py
 # @Last modified by:   chenyu
-# @Last modified time: 20_Oct_2017
+# @Last modified time: 21_Oct_2017
 
 import multiprocessing
 import zmq
@@ -13,7 +13,7 @@ import numpy as np
 import config
 
 from ai.mcts_policy import Tree, Node
-
+from env.gobang import axis, valid
 msgpack_numpy.patch()
 
 
@@ -41,6 +41,8 @@ class Player(multiprocessing.Process):
         """从server接收board局势."""
         content = self.server_socket.recv()
         content = msgpack.loads(content)
+        content[1] = int(content[1])
+        content[2] = int(content[2])
         return content
 
     def _send_server(self, content):
@@ -57,7 +59,7 @@ class Player(multiprocessing.Process):
             # 复用
             node = self.tree.nodes[position]
         else:
-            self.tree.nodes[position] = Node(position)
+            self.tree.nodes[position] = Node(*board)
 
     def _get_pi(self, board):
         """MCTS模拟config.NUM_SIMULATIONS，输出温度加权的次数分布"""
@@ -65,12 +67,15 @@ class Player(multiprocessing.Process):
             self._simulate(board)
         return np.random.random([225])
 
-    def _send_decision(self, board, pi):
-        """选择位置，并发送给server, 以及memory"""
-        sum_pi = sum(pi)
-        probs = [x / sum_pi for x in pi]
+    def _get_action(self, board, pi):
+        """按pi 温度加权抽样"""
+        temperature_pi = [np.power(x, config.TEMPERATURE) for x in pi]
+        sum_pi = sum(temperature_pi)
+        probs = [np.power(x, config.TEMPERATURE) / sum_pi for x in pi]
         ind = np.random.choice(list(range(225)), p=probs)
-        self._send_server((board[0], ind // 15, ind % 15))
+        while not valid(board[1], board[2], *axis(ind)):
+            ind = np.random.choice(list(range(225)), p=probs)
+        return axis(ind)
 
     def _end_round(self, board):
         pass
@@ -78,13 +83,13 @@ class Player(multiprocessing.Process):
     def _run_a_round(self):
         while True:
             board = self._recv_server()
-            if board[0] in "BW":
+            if board[0] < 0:
                 self._end_round(board)
                 return
-            else:
-                self.side = board[0]
+
             pi = self._get_pi(board)
-            self._send_decision(board, pi)
+            action = self._get_action(board, pi)
+            self._send_server(action)
 
     def run(self):
         np.random.seed()
