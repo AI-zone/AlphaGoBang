@@ -10,15 +10,19 @@ import zmq
 import msgpack
 import msgpack_numpy
 import numpy as np
+import math
 import config
 
 from ai.mcts_policy import Tree, Node
-from env.gobang import axis, valid
+from env.gobang import axis, valid, legal
 msgpack_numpy.patch()
 
 
 class Player(multiprocessing.Process):
-    """你来写"""
+    """
+    一个Player同时玩K局，公用1个Tree，Tree的节点访问次数到1600就直接输出pi，
+    否则继续扩展。这样不同对局累积下来的经验可以共享，效率高一些.
+    """
 
     def __init__(self, sid, player_id):
         super().__init__()
@@ -52,29 +56,17 @@ class Player(multiprocessing.Process):
         """通过zmq向inference询问pv"""
         return np.random.random([226])
 
-    def _simulate(self, board):
-        """迭代着_get_inference, select, expand, backup. 没有return"""
-        position = (board[2], board[2])
-        if position in self.tree.nodes:
-            # 复用
-            node = self.tree.nodes[position]
-        else:
-            self.tree.nodes[position] = Node(*board)
-
     def _get_pi(self, board):
-        """MCTS模拟config.NUM_SIMULATIONS，输出温度加权的次数分布"""
-        for _ in range(config.NUM_SIMULATIONS):
-            self._simulate(board)
-        return np.random.random([225])
+        """board=t,black,white"""
+        return self.tree.get_pi(*board)
 
     def _get_action(self, board, pi):
         """按pi 温度加权抽样"""
-        temperature_pi = [np.power(x, config.TEMPERATURE) for x in pi]
+        empty = legal(board[1], board[2])
+        temperature_pi = [math.pow(pi[i], config.TEMPERATURE) for i in empty]
         sum_pi = sum(temperature_pi)
-        probs = [np.power(x, config.TEMPERATURE) / sum_pi for x in pi]
-        ind = np.random.choice(list(range(225)), p=probs)
-        while not valid(board[1], board[2], *axis(ind)):
-            ind = np.random.choice(list(range(225)), p=probs)
+        probs = [math.pow(pi[i], config.TEMPERATURE) / sum_pi for i in empty]
+        ind = np.random.choice(empty, p=probs)
         return axis(ind)
 
     def _end_round(self, board):
@@ -94,7 +86,8 @@ class Player(multiprocessing.Process):
     def run(self):
         np.random.seed()
         self._buildsockets()
-        self._run_a_round()
+        while True:
+            self._run_a_round()
 
 
 if __name__ == "__main__":

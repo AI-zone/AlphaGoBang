@@ -79,6 +79,7 @@ class Server(threading.Thread):
             self._run_a_round()
             print('Finish a round')
             self.g.show()
+            input("ENTER TO CONTINUE")
 
 
 if __name__ == "__main__":

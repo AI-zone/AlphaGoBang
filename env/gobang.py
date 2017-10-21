@@ -35,6 +35,15 @@ def valid(black, white, x, y):
     return (not black & gobit[(x, y)]) and (not white & gobit[(x, y)])
 
 
+def legal(black, white):
+    """返回所有合法落子ind"""
+    empty = []
+    for ind in range(225):
+        if valid(black, white, *axis(ind)):
+            empty.append(ind)
+    return empty
+
+
 def check(board, x, y):
     """检查刚刚落子的那个人是否赢了"""
     row = board & mask_row[x]
@@ -75,17 +84,19 @@ class Game():
         self.black = black
         self.white = white
         self.t = t
+        self.logs = []
 
     def newround(self, t=0, black=0, white=0):
         self.black = black
         self.white = white
         self.t = t
+        self.logs = []
 
     def add(self, x, y):
         """落子"""
         if not valid(self.white, self.black, x, y):
             raise RuntimeError('duplicated move')
-
+        self.logs.append((x, y))
         if self.t % 2 == 0:
             self.black += gobit[(x, y)]
             self.t += 1
@@ -96,12 +107,13 @@ class Game():
         else:
             self.white += gobit[(x, y)]
             self.t += 1
-            if check(self.black, x, y):
+            if check(self.white, x, y):
                 return "W"
             else:
                 return "P"
 
     def show(self):
+        """TODO: 根据self.logs改成可视化棋谱，类似AlphaGo围棋SGF图片"""
         s = ""
         for x in X:
             for y in Y:
