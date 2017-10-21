@@ -16,10 +16,19 @@ def move_state(mine, yours, a, check_win=True):
     return (yours, mine), True
 
 
-class Node():
-    __slots__ = ['t', 'N', 'W', 'mine', 'yours', 'p', 'v']
+def make_mask(action):
+    x, y = axis(action)
+    mask = 0
+    for i in range(-config.DISTANCE, (config.DISTANCE + 1)):
+        for j in range(-config.DISTANCE, (config.DISTANCE + 1)):
+            mask += gobit[(x + i, y + j)]
+    return mask
 
-    def __init__(self, t, mine, yours):
+
+class Node():
+    __slots__ = ['t', 'N', 'W', 'mine', 'yours', 'p', 'v', 'mask']
+
+    def __init__(self, t, mine, yours, mask):
         """"建一个搜索树的节点. 注意：node永远是需要下棋的一方在第0张矩阵
         t: 棋盘中的总棋子ge个数，可以用来判断value的正负以及谁赢了.
         s_t: t为偶数，该黑子下棋了
@@ -31,6 +40,7 @@ class Node():
         self.get_p_v(mine, yours)
         self.mine = mine
         self.yours = yours
+        self.mask = mask
 
     # @profile
     def get_p_v(self, mine, yours):
@@ -41,7 +51,7 @@ class Node():
 
 class Tree():
     """MCTS."""
-    __slots__ = ['nodes']
+    __slots__ = ['nodes', 'mask']
 
     def __init__(self):
         self.nodes = {}
@@ -65,22 +75,22 @@ class Tree():
         cur = self.nodes[s_t]
         cur.N += 1
         if isleaf:
-            print('############')
             if simu_step % 2 == 1:
                 return 1
-            return 0
+            return -1
 
         if simu_step >= config.L:
             # return self.nodes[s_t].v
             return 0
         # 往下走
-        empty = legal(s_t[0], s_t[1])
-        empty = random.sample(empty, (1 + int(0.1 * len(empty))))
+        empty = legal(s_t[0], s_t[1], simu_step)
+        empty = [a for a in empty if gobit[axis(a)] & cur.mask]
         action = empty[np.argmax([self.QnU(s_t, a) for a in empty])]
         s_tplus1, isleaf = move_state(*s_t, action)
         if s_tplus1 not in self.nodes:
             #  见过就复用，否则创建新节点
-            self.nodes[s_tplus1] = Node(simu_step + 1, *s_tplus1)
+            self.nodes[s_tplus1] = Node(simu_step + 1, *s_tplus1,
+                                        cur.mask | make_mask(action))
         v = self._simulate(simu_step + 1, s_tplus1, isleaf)
         cur.W += v
         return v
@@ -91,20 +101,21 @@ class Tree():
         s_t = (black, white) if t % 2 == 0 else (white, black)
         if s_t not in self.nodes:
             #  见过就复用，否则创建新节点
-            self.nodes[s_t] = Node(t, *s_t)
+            new_mask = gobit[(7, 7)]
+            for ind in range(255):
+                if gobit[axis(ind)] & (s_t[0] | s_t[1]):
+                    new_mask = new_mask | make_mask(ind)
+            self.nodes[s_t] = Node(t, *s_t, new_mask)
         while self.nodes[s_t].N < config.NUM_SIMULATIONS:
             self._simulate(t, s_t)
-            print(self.nodes[s_t].N)
-        empty = legal(s_t[0], s_t[1])
-        pi = {}
+        empty = legal(s_t[0], s_t[1], t)
+        pi = np.zeros(225)
         for a in empty:
             next_s = move_state(*s_t, a)[0]
             if next_s not in self.nodes:
                 continue
-            pi[axis(a)] = self.nodes[next_s].N
-        print(sorted(pi.items(), key=lambda a: a[1], reverse=True))
-        sys.exit(0)
-        return np.random.random(225)
+            pi[a] = self.nodes[next_s].N
+        return pi
 
 
 if __name__ == "__main__":

@@ -5,12 +5,15 @@ Created on Sat Aug  5 22:04:19 2017
 
 @author: chenyu
 """
+
 import config
 X = [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe]
 Y = [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe]
 
 gobit = {}
-
+for x in range(-3, 18):
+    for y in range(-3, 18):
+        gobit[(x, y)] = 0
 for x in X:
     for y in Y:
         gobit[(x, y)] = 2**(x + 15 * y)
@@ -30,17 +33,40 @@ def axis(ind):
     return ind // 15, ind % 15
 
 
+def toind(x, y):
+    return x * 15 + y
+
+
 # @profile
 def valid(black, white, x, y):
-    """在x,y落子是否合法."""
+    """在x,y落子是否合法. 即此处无子
+    """
     return (not black & gobit[(x, y)]) and (not white & gobit[(x, y)])
 
 
 # @profile
-def legal(black, white):
-    """返回所有合法落子ind"""
+def legal(black, white, t):
+    """返回所有合法落子ind
+    根据比赛规则：黑1必须天元，白1 3x3  黑2 5x5  白2没有限制"""
+    if t == 0:
+        legal_list = [toind(7, 7)]
+    elif t == 1:
+        legal_list = [
+            toind(7 + i, 7 + j) for i in [-1, 0, 1] for j in [-1, 0, 1]
+        ]
+    elif t == 2:
+        legal_list = [
+            toind(7 + i, 7 + j)
+            for i in [-2, -1, 0, 1, 2] for j in [-2, -1, 0, 1, 2]
+        ]
+    elif t <= 10:
+        legal_list = [
+            toind(7 + i, 7 + j) for i in range(-4, 5) for j in range(-4, 5)
+        ]
+    else:
+        legal_list = list(range(config.SIZE))
     empty = []
-    for ind in range(config.SIZE):
+    for ind in legal_list:
         if valid(black, white, *axis(ind)):
             empty.append(ind)
     return empty
@@ -98,17 +124,17 @@ class Game():
     提供一个show() 函数，打印当前状态  x为黑， o为白
     """
 
-    def __init__(self, t=1, black=gobit[(7, 7)], white=0):
+    def __init__(self, t=0, black=0, white=0):
         self.black = black
         self.white = white
         self.t = t
-        self.logs = [(7, 7)]
+        self.logs = []
 
-    def newround(self, t=1, black=gobit[(7, 7)], white=0):
+    def newround(self, t=0, black=0, white=0):
         self.black = black
         self.white = white
         self.t = t
-        self.logs = [(7, 7)]
+        self.logs = []
 
     def add(self, x, y):
         """落子"""

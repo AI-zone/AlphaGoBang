@@ -11,11 +11,12 @@ import zmq
 import msgpack
 import msgpack_numpy
 from env.gobang import Game
+import config
 msgpack_numpy.patch()
 
 
 class Server(threading.Thread):
-    """你来写"""
+    """Server."""
 
     def __init__(self, sid):
         super().__init__()
@@ -30,26 +31,23 @@ class Server(threading.Thread):
         socket.bind('ipc://./tmp/server' + str(self.sid))
         self.socket = socket
         self.addr = []
-        _addr, content = self.socket.recv_multipart()
-        self.addr.append(_addr)
-        _addr, content = self.socket.recv_multipart()
-        self.addr.append(_addr)
+        for _ in range(config.MODE):
+            _addr, content = self.socket.recv_multipart()
+            self.addr.append(_addr)
+        print("FINISH build socket")
 
     def _send(self, end=None):
         if not end:
             self.socket.send_multipart([
-                self.addr[(self.g.t + self.offset) % 2],
+                self.addr[(self.g.t + self.offset) % config.MODE],
                 msgpack.dumps((self.g.t, str(self.g.black), str(self.g.white)))
             ])
         else:
-            self.socket.send_multipart([
-                self.addr[0],
-                msgpack.dumps((-1, str(self.g.black), str(self.g.white)))
-            ])
-            self.socket.send_multipart([
-                self.addr[1],
-                msgpack.dumps((-1, str(self.g.black), str(self.g.white)))
-            ])
+            for i in range(config.MODE):
+                self.socket.send_multipart([
+                    self.addr[i],
+                    msgpack.dumps((-1, str(self.g.black), str(self.g.white)))
+                ])
 
     def _recv(self):
         _addr, content = self.socket.recv_multipart()
@@ -84,4 +82,4 @@ class Server(threading.Thread):
 
 if __name__ == "__main__":
     server = Server(0)
-    server.start()
+    server.run()

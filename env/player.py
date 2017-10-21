@@ -6,15 +6,17 @@
 # @Last modified time: 21_Oct_2017
 
 import multiprocessing
+import time
 import zmq
 import msgpack
 import msgpack_numpy
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 import config
 
 from ai.mcts_policy import Tree, Node
-from env.gobang import axis, valid, legal
+from env.gobang import axis, valid, legal, gobit
 msgpack_numpy.patch()
 
 
@@ -40,6 +42,7 @@ class Player(multiprocessing.Process):
         self.server_socket.send(msgpack.dumps(self.player_id))
         # self.net_socket = context.socket(zmq.DEALER)
         # self.net_socket.connect('ipc://./tmp/net' + str(self.sid))
+        print("FINISH build socket")
 
     def _recv_server(self):
         """从server接收board局势."""
@@ -62,7 +65,7 @@ class Player(multiprocessing.Process):
 
     def _get_action(self, board, pi):
         """按pi 温度加权抽样"""
-        empty = legal(board[1], board[2])
+        empty = legal(board[1], board[2], board[0])
         temperature_pi = [math.pow(pi[i], config.TEMPERATURE) for i in empty]
         sum_pi = sum(temperature_pi)
         probs = [math.pow(pi[i], config.TEMPERATURE) / sum_pi for i in empty]
@@ -78,9 +81,21 @@ class Player(multiprocessing.Process):
             if board[0] < 0:
                 self._end_round(board)
                 return
-
+            tstart = time.time()
             pi = self._get_pi(board)
             action = self._get_action(board, pi)
+            print(board[0], time.time() - tstart)
+            img_show_mat = np.reshape(pi, (15, 15)) / np.max(pi)
+            black = board[1]  # if board[0] % 2 else board[2]
+            white = board[2]  # if board[0] % 2 else board[1]
+            for ind in range(255):
+                x, y = axis(ind)
+                if gobit[(x, y)] & black:
+                    img_show_mat[x, y] = -1
+                if gobit[(x, y)] & white:
+                    img_show_mat[x, y] = -2
+            plt.imshow(img_show_mat)
+            plt.show()
             self._send_server(action)
 
     def run(self):
@@ -91,6 +106,6 @@ class Player(multiprocessing.Process):
 
 
 if __name__ == "__main__":
-    players = [Player(0, 0), Player(0, 1)]
+    players = [Player(0, i) for i in range(config.MODE)]
     for p in players:
         p.start()
