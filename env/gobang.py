@@ -5,8 +5,7 @@ Created on Sat Aug  5 22:04:19 2017
 
 @author: chenyu
 """
-
-from __future__ import print_function
+import config
 X = [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe]
 Y = [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe]
 
@@ -26,24 +25,28 @@ for x in X:
         mask_fan[15 + x - y] += gobit[(x, y)]
 
 
+# @profile
 def axis(ind):
     return ind // 15, ind % 15
 
 
+# @profile
 def valid(black, white, x, y):
     """在x,y落子是否合法."""
     return (not black & gobit[(x, y)]) and (not white & gobit[(x, y)])
 
 
+# @profile
 def legal(black, white):
     """返回所有合法落子ind"""
     empty = []
-    for ind in range(225):
+    for ind in range(config.SIZE):
         if valid(black, white, *axis(ind)):
             empty.append(ind)
     return empty
 
 
+# @profile
 def check(board, x, y):
     """检查刚刚落子的那个人是否赢了"""
     row = board & mask_row[x]
@@ -59,6 +62,21 @@ def check(board, x, y):
         return True
     if fan & (fan << 16) & (fan << 32) & (fan << 48) & (fan << 64) > 0:
         return True
+
+
+def show(black, white):
+    """TODO: 根据self.logs改成可视化棋谱，类似AlphaGo围棋SGF图片"""
+    s = ""
+    for x in X:
+        for y in Y:
+            if (black & gobit[(x, y)]):
+                s += 'x'
+            elif (white & gobit[(x, y)]):
+                s += 'o'
+            else:
+                s += ' '
+        s += '\n'
+    print(s)
 
 
 class Game():
@@ -80,17 +98,17 @@ class Game():
     提供一个show() 函数，打印当前状态  x为黑， o为白
     """
 
-    def __init__(self, t=0, black=0, white=0):
+    def __init__(self, t=1, black=gobit[(7, 7)], white=0):
         self.black = black
         self.white = white
         self.t = t
-        self.logs = []
+        self.logs = [(7, 7)]
 
-    def newround(self, t=0, black=0, white=0):
+    def newround(self, t=1, black=gobit[(7, 7)], white=0):
         self.black = black
         self.white = white
         self.t = t
-        self.logs = []
+        self.logs = [(7, 7)]
 
     def add(self, x, y):
         """落子"""
@@ -113,18 +131,44 @@ class Game():
                 return "P"
 
     def show(self):
-        """TODO: 根据self.logs改成可视化棋谱，类似AlphaGo围棋SGF图片"""
-        s = ""
-        for x in X:
-            for y in Y:
-                if (self.black & gobit[(x, y)]):
-                    s += 'x'
-                elif (self.white & gobit[(x, y)]):
-                    s += 'o'
+        """TODO: 根据self.logs在终端可视化棋谱"""
+        log = {}
+        style = 0
+        f_color = 0
+        b_color = 0
+        stupid = 0
+        for index, (x, y) in enumerate(self.logs):
+            log[(x, y)] = index
+        # log = sorted(log, key=lambda x: (x[0], x[1]))
+        print('--------show table--------')
+        for i in range(15):
+            for j in range(15):
+                if (i, j) in log:
+                    if (log[(i, j)] >= 100):
+                        log[(i, j)] -= 100
+                        stupid = 1
+                    else:
+                        stupid = 0
+                    if (log[(i, j)] % 2 == 0):
+                        b_color = 47
+                        if stupid:
+                            f_color = 31
+                        else:
+                            f_color = 30
+                    else:
+                        f_color = 37
+                        if stupid:
+                            b_color = 41
+                        else:
+                            b_color = 40
+                    print(
+                        "\033[%d;%d;%dm%02d\033[0m" % (style, f_color, b_color,
+                                                       log[(i, j)]),
+                        end='')
                 else:
-                    s += ' '
-            s += '\n'
-        print(s)
+                    print("  ", end='')
+            print("")
+        print('--------------------------')
 
 
 if __name__ == "__main__":

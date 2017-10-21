@@ -5,6 +5,8 @@
 # @Last modified by:   chenyu
 # @Last modified time: 21_Oct_2017
 
-NUM_SIMULATIONS = 1600
+NUM_SIMULATIONS = 5000
 TEMPERATURE = 1
-EXPLORATION = 1
+EXPLORATION = 0.1
+SIZE = 225
+L = 100
