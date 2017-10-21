@@ -126,6 +126,45 @@ class Game():
             s += '\n'
         print(s)
 
+    def show2(self):
+        """TODO: 根据self.logs在终端可视化棋谱"""
+        log = {}
+        style = 0
+        f_color = 0
+        b_color = 0
+        stupid = 0
+        for index, (x, y) in enumerate(self.logs):
+            log[(x, y)] = index
+        # log = sorted(log, key=lambda x: (x[0], x[1]))
+        print('--------show table--------')
+        for i in range(15):
+            for j in range(15):
+                if (i, j) in log:
+                    if(log[(i, j)] >= 100):
+                        log[(i, j)] -= 100
+                        stupid = 1
+                    else:
+                        stupid = 0
+                    if(log[(i, j)] % 2 == 0):
+                        b_color = 47
+                        if stupid:
+                            f_color = 31
+                        else:
+                            f_color = 30
+                    else:
+                        f_color = 37
+                        if stupid:
+                            b_color = 41
+                        else:
+                            b_color = 40
+                    print("\033[%d;%d;%dm%02d\033[0m" % (style, f_color,
+                                                         b_color, log[(i, j)]),
+                          end='')
+                else:
+                    print("  ", end='')
+            print("")
+        print('--------------------------')
+
 
 if __name__ == "__main__":
     g = Game()
@@ -134,12 +173,12 @@ if __name__ == "__main__":
     g.add(7, 6)
     g.add(6, 7)
     g.add(6, 10)
-    g.show()
+    g.show2()
     g.add(7, 8)
-    g.add(7, 9)
     g.add(7, 5)
+    g.add(7, 9)
     g.add(4, 4)
     g.add(7, 4)
-    g.show()
+    g.show2()
     g.white
     g.black
