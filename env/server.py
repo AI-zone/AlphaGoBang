@@ -64,6 +64,7 @@ class Server(threading.Thread):
             self._send()
             x, y = self._recv()
             result = self.g.add(x, y)
+            self.g.show()
             if result in 'BW':
                 self._send(result)
                 return
@@ -77,7 +78,7 @@ class Server(threading.Thread):
             self._run_a_round()
             print('Finish a round')
             self.g.show()
-            input("ENTER TO CONTINUE")
+            # input("ENTER TO CONTINUE")
 
 
 if __name__ == "__main__":

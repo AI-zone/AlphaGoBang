@@ -11,9 +11,10 @@ from env.gobang import valid, check, axis, gobit, legal, show
 def move_state(mine, yours, a, check_win=True):
     mine += gobit[axis(a)]
     if check_win:
-        if not check(mine, *axis(a)):
-            return (yours, mine), False
-    return (yours, mine), True
+        point = check(mine, yours, *axis(a))
+    else:
+        point = 0
+    return (yours, mine), point
 
 
 def make_mask(action):
@@ -70,15 +71,21 @@ class Tree():
         return Q + U
 
     # @profile
-    def _simulate(self, simu_step, s_t, isleaf=False):
+    def _simulate(self, begin, simu_step, s_t, isleaf=0):
         """从s_t开始往下走, 已经走了simu_step步."""
         cur = self.nodes[s_t]
         cur.N += 1
-        if isleaf:
-            if simu_step % 2 == 1:
+        if isleaf == 1:
+            # 因为走了下一步，所以begin与simu_step 奇偶不同则赢
+            if (simu_step - begin) % 2 == 1:
                 return 1
             return -1
-
+        elif isleaf == -1:
+            # 奇数时间，表示上一步黑子，禁手
+            if simu_step % 2 == 1:
+                if begin % 2 == 0:
+                    return -1
+                return 1
         if simu_step >= config.L:
             # return self.nodes[s_t].v
             return 0
@@ -91,7 +98,7 @@ class Tree():
             #  见过就复用，否则创建新节点
             self.nodes[s_tplus1] = Node(simu_step + 1, *s_tplus1,
                                         cur.mask | make_mask(action))
-        v = self._simulate(simu_step + 1, s_tplus1, isleaf)
+        v = self._simulate(begin, simu_step + 1, s_tplus1, isleaf)
         cur.W += v
         return v
 
@@ -107,7 +114,7 @@ class Tree():
                     new_mask = new_mask | make_mask(ind)
             self.nodes[s_t] = Node(t, *s_t, new_mask)
         while self.nodes[s_t].N < config.NUM_SIMULATIONS:
-            self._simulate(t, s_t)
+            self._simulate(t, t, s_t)
         empty = legal(s_t[0], s_t[1], t)
         pi = np.zeros(225)
         for a in empty:

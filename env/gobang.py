@@ -94,7 +94,9 @@ def check_backup(board, x, y):
 
 
 def check(mine, yours, x, y):
-    """检查刚刚落子的那个人(棋盘mine)是否赢+1，是否33，44禁手-1，其他0."""
+    """检查刚刚落子的那个人(棋盘mine)是否赢+1，是否33，44禁手-1，其他0.
+    !!!check里面不区分黑白
+    """
     row = mine & mask_row[x]
     col = mine & mask_col[y]
     zheng = mine & mask_zheng[x + y]
@@ -185,14 +187,18 @@ class Game():
         if self.t % 2 == 0:
             self.black += gobit[(x, y)]
             self.t += 1
-            if check(self.black, self.white, x, y):
+            point = check(self.black, self.white, x, y)
+            if point == 1:
                 return "B"
+            elif point == -1:
+                return "W"
             else:
                 return "P"
         else:
             self.white += gobit[(x, y)]
             self.t += 1
-            if check(self.white, self.black, x, y):
+            point = check(self.white, self.black, x, y)
+            if point == 1:
                 return "W"
             else:
                 return "P"
