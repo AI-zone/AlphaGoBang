@@ -14,3 +14,5 @@ L = 40
 DISTANCE = 2
 
 MODE = 1  # 1: pure self play  2: between AI
+
+LEARNINGRATE = 0.001

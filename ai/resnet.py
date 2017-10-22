@@ -6,6 +6,7 @@
 # @Last modified time: 19_Oct_2017
 """Provides mnist_estimator function for generating tf.estimator.Estimators."""
 import os
+import config
 import tensorflow as tf
 
 
@@ -81,19 +82,6 @@ def _get_loss(logits, labels):
     return loss
 
 
-def _get_train_op(loss, learning_rate):
-    optimizer = tf.train.AdamOptimizer(learning_rate)
-    steps = tf.get_collection(tf.GraphKeys.GLOBAL_STEP)
-    if len(steps) == 1:
-        step = steps[0]
-    else:
-        raise Exception('Multiple global steps disallowed')
-    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-    with tf.control_dependencies(update_ops):
-        train_op = optimizer.minimize(loss, step)
-    return train_op
-
-
 def _get_predictions(logits):
     return tf.argmax(logits, axis=-1)
 
@@ -117,31 +105,19 @@ def model_fn(features, labels, mode, params, config):
         params['dense_nodes'],
         params['n_classes'],
         training=training)
-    predictions = _get_predictions(logits)
-    export_outputs = {
-        'forecast': tf.estimator.export.PredictOutput({
-            'probs': logits
-        })
-    }
-    if training:
-        loss = _get_loss(logits, labels)
-        train_op = _get_train_op(loss, params['learning_rate'])
-        return tf.estimator.EstimatorSpec(
-            mode=mode,
-            loss=loss,
-            train_op=train_op,
-            export_outputs=export_outputs)
-    elif mode == tf.estimator.ModeKeys.EVAL:
-        loss = _get_loss(logits, labels)
+    head1 = tf.contrib.learn.multi_class_head(
+        n_classes=params['n_classes'], label_name='pi', head_name="policy")
+    head2 = tf.contrib.learn.regression_head(
+        label_name='pi', head_name="value")
+    head = tf.contrib.learn.multi_head([head1, head2])
 
-        eval_metric_ops = _get_accuracy(labels, logits)
-        return tf.estimator.EstimatorSpec(
-            mode=mode,
-            loss=loss,
-            eval_metric_ops=eval_metric_ops,
-            export_outputs=export_outputs)
-    elif mode == tf.estimator.ModeKeys.PREDICT:
-        return tf.estimator.EstimatorSpec(
-            mode=mode, predictions=predictions, export_outputs=export_outputs)
-    else:
-        raise Exception('mode unrecognized: %s' % mode)
+    def _train_op_fn(loss):
+        optimizer = tf.train.AdamOptimizer(config.LEARNINGRATE)
+        return optimizer.minimize(loss)
+
+    return head.create_model_fn_ops(
+        features=features,
+        labels=labels,
+        mode=mode,
+        train_op_fn=_train_op_fn,
+        logits=logits)

@@ -7,6 +7,9 @@ Created on Sat Aug  5 22:04:19 2017
 """
 
 import config
+import pickle
+
+complete5, open4, open3 = pickle.load(open('./env/cached.pkl', 'rb'))
 X = [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe]
 Y = [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe]
 
@@ -25,7 +28,7 @@ mask_fan = [0] * 30
 for x in X:
     for y in Y:
         mask_zheng[x + y] += gobit[(x, y)]
-        mask_fan[15 + x - y] += gobit[(x, y)]
+        mask_fan[14 + x - y] += gobit[(x, y)]
 
 
 # @profile
@@ -73,12 +76,12 @@ def legal(black, white, t):
 
 
 # @profile
-def check(board, x, y):
+def check_backup(board, x, y):
     """检查刚刚落子的那个人是否赢了"""
     row = board & mask_row[x]
     col = board & mask_col[y]
     zheng = board & mask_zheng[x + y]
-    fan = board & mask_fan[15 + x - y]
+    fan = board & mask_fan[14 + x - y]
     if row & (row << 15) & (row << 30) & (row << 45) & (row << 60) > 0:
         return True
     if col & (col << 1) & (col << 2) & (col << 3) & (col << 4) > 0:
@@ -88,6 +91,44 @@ def check(board, x, y):
         return True
     if fan & (fan << 16) & (fan << 32) & (fan << 48) & (fan << 64) > 0:
         return True
+
+
+def check(mine, yours, x, y):
+    """检查刚刚落子的那个人(棋盘mine)是否赢+1，是否33，44禁手-1，其他0."""
+    row = mine & mask_row[x]
+    col = mine & mask_col[y]
+    zheng = mine & mask_zheng[x + y]
+    fan = mine & mask_fan[14 + x - y]
+    if any(i in complete5 for i in [row, col, zheng, fan]):
+        return 1
+    # 33 44 判负
+    num3 = 0
+    num4 = 0
+    empty = ~(mine | yours)
+    ind = toind(x, y)
+    # cachedinfo mine empty nomine
+    for case in [row, col, zheng, fan]:
+        if case in open3:
+            for info in open3[case]:
+                if ind not in info[0]:
+                    continue
+                valid_e = all(gobit[axis(i)] & empty for i in info[1])
+                valid_n = all(gobit[axis(i)] & mine == 0 for i in info[2])
+                if valid_e and valid_n:
+                    num3 += 1
+                    break
+        if case in open4:
+            for info in open4[case]:
+                if ind not in info[0]:
+                    continue
+                valid_e = all(gobit[axis(i)] & empty for i in info[1])
+                valid_n = all(gobit[axis(i)] & mine == 0 for i in info[2])
+                if valid_e and valid_n:
+                    num4 += 1
+                    break
+    if (num3 > 1) or (num4 > 1):
+        return -1
+    return 0
 
 
 def show(black, white):
@@ -144,14 +185,14 @@ class Game():
         if self.t % 2 == 0:
             self.black += gobit[(x, y)]
             self.t += 1
-            if check(self.black, x, y):
+            if check(self.black, self.white, x, y):
                 return "B"
             else:
                 return "P"
         else:
             self.white += gobit[(x, y)]
             self.t += 1
-            if check(self.white, x, y):
+            if check(self.white, self.black, x, y):
                 return "W"
             else:
                 return "P"
