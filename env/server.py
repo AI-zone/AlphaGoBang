@@ -60,7 +60,7 @@ class Server(threading.Thread):
         self.offset = np.random.randint(2)
         self._new_game()
 
-        while True:
+        for _ in range(config.L):
             self._send()
             x, y = self._recv()
             result = self.g.add(x, y)

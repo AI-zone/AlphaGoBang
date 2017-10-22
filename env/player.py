@@ -85,17 +85,18 @@ class Player(multiprocessing.Process):
             pi = self._get_pi(board)
             action = self._get_action(board, pi)
             print(board[0], time.time() - tstart)
-            img_show_mat = np.reshape(pi, (15, 15)) / np.max(pi)
-            black = board[1]  # if board[0] % 2 else board[2]
-            white = board[2]  # if board[0] % 2 else board[1]
-            for ind in range(255):
-                x, y = axis(ind)
-                if gobit[(x, y)] & black:
-                    img_show_mat[x, y] = -1
-                if gobit[(x, y)] & white:
-                    img_show_mat[x, y] = -2
-            plt.imshow(img_show_mat)
-            plt.show()
+            # # print in qtconsole
+            # img_show_mat = np.reshape(pi, (15, 15)) / np.max(pi)
+            # black = board[1]
+            # white = board[2]
+            # for ind in range(255):
+            #     x, y = axis(ind)
+            #     if gobit[(x, y)] & black:
+            #         img_show_mat[x, y] = -1
+            #     if gobit[(x, y)] & white:
+            #         img_show_mat[x, y] = -2
+            # plt.imshow(img_show_mat)
+            # plt.show()
             self._send_server(action)
 
     def run(self):
