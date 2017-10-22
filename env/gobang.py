@@ -27,30 +27,14 @@ for x in X:
         mask_zheng[x + y] += gobit[(x, y)]
         mask_fan[15 + x - y] += gobit[(x, y)]
 
-bar = {5: {}, 6: {}}
-for x in range(15):
-    for y in range(15):
-        bar[5][(x, y)] = [
-            sum([gobit[x + i, y] for i in range(5)]),
-            sum([gobit[x + i, y + i] for i in range(5)]),
-            sum([gobit[x, y + i] for i in range(5)]),
-            sum([gobit[x - i, y + i] for i in range(5)])
-        ]
-        bar[6][(x, y)] = [
-            sum([gobit[x + i, y] for i in range(6)]),
-            sum([gobit[x + i, y + i] for i in range(6)]),
-            sum([gobit[x, y + i] for i in range(6)]),
-            sum([gobit[x - i, y + i] for i in range(6)])
-        ]
-
 
 # @profile
 def axis(ind):
-    return ind // 15, ind % 15
+    return ind % 15, ind // 15
 
 
 def toind(x, y):
-    return x * 15 + y
+    return x + 15 * y
 
 
 # @profile
@@ -104,25 +88,6 @@ def check(board, x, y):
         return True
     if fan & (fan << 16) & (fan << 32) & (fan << 48) & (fan << 64) > 0:
         return True
-
-
-def foreward_check(mine, yours):
-    """检查即将落子于board的人是不是必赢.
-        oxxxo(3) oxxoxo(3) oxoxxo(3) oxxxx(4)
-        xoxxx(4) xxoxx(4) xxxox(4) xxxxo(4)
-
-        以上8种情况，出现任意一种为赢。顺便检查33 44 禁手， 出现两个33 或两个44为输。
-    """
-    empty = ~(mine | yours)
-    for x in range(15):
-        for y in range(15):
-            if yours & gobit[(x, y)]:
-                continue
-            # 取出 x,y 位置的正下，右下，正右，右上四个方向长度为5或6的一段.
-            submine = mine & bar[5][x, y]
-            subempty = empty & bar[5][x, y]
-            submine = mine & bar[6][x, y]
-            subempty = empty & bar[6][x, y]
 
 
 def show(black, white):
