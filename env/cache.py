@@ -39,26 +39,35 @@ for x in range(15):
                 complete5[col_sum].append(([], [], []))
 
 print("complete5")
-for possible_num in range(5, 14):
-    for num_y in range(5, possible_num):
-        possible_y = itertools.combinations(list(range(possible_num)), num_y)
-        for select_set in possible_y:
-            fan_sum = sum(
-                [gobit[i, 15 + i - possible_num] for i in select_set])
-            f = fan_sum & mask_fan[possible_num]
+# fan  line_id = 14 - x + y
+for line_id in range(4, 25):
+    for num_y in range(4, 15):
+        max_stone_num = 15 - abs(14 - line_id)
+        y_range = list(range(0, max_stone_num)) if line_id <= 14 else list(
+            range(15 - max_stone_num, 15))
+        # 线上的所有点
+        line_points = [toind(14 + y - line_id, y) for y in y_range]
+        subsets = itertools.combinations(line_points, num_y)
+        for select_set in subsets:
+            fan_sum = sum([gobit[axis(i)] for i in select_set])
+            f = fan_sum & mask_fan[line_id]
             have5 = f & (f << 16) & (f << 32) & (f << 48) & (f << 64)
             have6 = have5 & (f << 80)
             if (have5 > 0) and (have6 == 0):
                 complete5[fan_sum].append(([], [], []))
 
 print("complete5")
-for possible_num in range(5, 14):
-    for num_y in range(5, possible_num):
-        possible_y = itertools.combinations(list(range(possible_num)), num_y)
-        for select_set in possible_y:
-            zheng_sum = sum(
-                [gobit[possible_num - 1 - i, i] for i in select_set])
-            z = zheng_sum & mask_zheng[possible_num - 1]
+for line_id in range(4, 25):
+    for num_y in range(4, 15):
+        max_stone_num = 15 - abs(14 - line_id)
+        y_range = list(range(0, max_stone_num)) if line_id <= 14 else list(
+            range(15 - max_stone_num, 15))
+        # 线上的所有点
+        line_points = [toind(line_id - y, y) for y in y_range]
+        subsets = itertools.combinations(line_points, num_y)
+        for select_set in subsets:
+            zheng_sum = sum([gobit[axis(i)] for i in select_set])
+            z = zheng_sum & mask_zheng[line_id]
             have5 = z & (z << 14) & (z << 28) & (z << 42) & (z << 56)
             have6 = have5 & (z << 70)
             if (have5 > 0) and (have6 == 0):
@@ -152,15 +161,15 @@ for x in range(15):
                             if (new_s, new_e) not in open3[left_sum]:
                                 open3[left_sum].append((new_s, new_e, new_n))
 print("complete5")
-# fan  line_id = 14+x-y
+# fan  line_id = 14 - x + y
 
 for line_id in range(5, 24):
-    for num_y in range(6, 15):  # number of stones in a line
+    for num_y in range(4, 15):  # number of stones in a line
         max_stone_num = 15 - abs(14 - line_id)
         y_range = list(range(0, max_stone_num)) if line_id <= 14 else list(
             range(15 - max_stone_num, 15))
         # 线上的所有点
-        line_points = [toind(line_id + y - 14, y) for y in y_range]
+        line_points = [toind(14 + y - line_id, y) for y in y_range]
         subsets = itertools.combinations(line_points, num_y)
         for select_set in subsets:
             fan_sum = sum([gobit[axis(i)] for i in select_set])
@@ -182,19 +191,19 @@ for line_id in range(5, 24):
                     empty = [begin + 1, begin + 6]
 
                     valid_empty = all(
-                        toind(line_id + y - 14, y) not in select_set
+                        toind(14 + y - line_id, y) not in select_set
                         for y in empty)
                     valid_mine = all(
-                        toind(line_id + y - 14, y) in select_set for y in mine)
+                        toind(14 + y - line_id, y) in select_set for y in mine)
                     valid_nomine = all(
-                        toind(line_id + y - 14, y) not in select_set
+                        toind(14 + y - line_id, y) not in select_set
                         for y in nomine)
 
                     if valid_empty and valid_mine and valid_nomine:
                         open4[fan_sum].append(
-                            ([toind(line_id + y - 14, y) for y in mine],
-                             [toind(line_id + y - 14, y) for y in empty],
-                             [toind(line_id + y - 14, y) for y in nomine]))
+                            ([toind(14 + y - line_id, y) for y in mine],
+                             [toind(14 + y - line_id, y) for y in empty],
+                             [toind(14 + y - line_id, y) for y in nomine]))
                         for remove in open4[fan_sum][-1][0]:
                             left_sum = fan_sum - gobit[axis(remove)]
                             new_s = open4[fan_sum][-1][0][:]
@@ -208,7 +217,7 @@ print("complete5")
 
 # zheng line_id x+y
 for line_id in range(5, 24):
-    for num_y in range(6, 15):
+    for num_y in range(4, 15):
         max_stone_num = 15 - abs(14 - line_id)
         y_range = list(range(0, max_stone_num)) if line_id <= 14 else list(
             range(15 - max_stone_num, 15))
@@ -256,11 +265,9 @@ for line_id in range(5, 24):
                         if (new_s, new_e) not in open3[left_sum]:
                             open3[left_sum].append((new_s, new_e, new_n))
 print("complete5")
-tmp = list(open3.keys())
+tmp = list(open4.keys())
+test = 365380984604097252011155841681389701486383988736
 test_id = random.randrange(len(tmp))
 show(tmp[test_id], 0)
-print([axis(i) for i in open3[tmp[test_id]][0][0]],
-      [axis(i) for i in open3[tmp[test_id]][0][1]],
-      [axis(i) for i in open3[tmp[test_id]][0][2]])
 len(tmp)
 pickle.dump((complete5, open4, open3), open('./env/cached.pkl', 'wb'))

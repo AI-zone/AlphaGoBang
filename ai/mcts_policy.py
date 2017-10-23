@@ -7,6 +7,22 @@ import config
 from env.gobang import valid, check, axis, gobit, legal, show
 
 
+def plot_pi(mine, yours, pi):
+    pi = pi / sum(pi) * 100
+    pi = pi.reshape((15, 15)).T
+    for x in range(15):
+        for y in range(15):
+            if (mine & gobit[(x, y)]):
+                print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
+            elif (yours & gobit[(x, y)]):
+                print("\033[%d;%d;%dm  \033[0m" % (0, 32, 42), end='')
+            elif int(pi[x, y]) >= 1:
+                print("%2d" % int(pi[x, y]), end='')
+            else:
+                print("  ", end='')
+        print("")
+
+
 # @profile
 def move_state(mine, yours, a, check_win=True):
     mine += gobit[axis(a)]
@@ -78,15 +94,19 @@ class Tree():
         if isleaf == 1:
             # 因为走了下一步，所以begin与simu_step 奇偶不同则赢
             if (simu_step - begin) % 2 == 1:
+                cur.W += 1
                 return 1
+            cur.W += -1
             return -1
         elif isleaf == -1:
             # 奇数时间，表示上一步黑子，禁手
             if simu_step % 2 == 1:
                 if begin % 2 == 0:
+                    cur.W += -1
                     return -1
+                cur.W += 1
                 return 1
-        if simu_step >= config.L:
+        if simu_step >= begin + config.L:
             # return self.nodes[s_t].v
             return 0
         # 往下走
@@ -99,7 +119,11 @@ class Tree():
             self.nodes[s_tplus1] = Node(simu_step + 1, *s_tplus1,
                                         cur.mask | make_mask(action))
         v = self._simulate(begin, simu_step + 1, s_tplus1, isleaf)
-        cur.W += v
+        if v == 0:
+            #  乱下没结果
+            cur.W += config.PUNISH * (simu_step - begin) / simu_step
+        else:
+            cur.W += v
         return v
 
     # @profile

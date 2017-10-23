@@ -28,7 +28,7 @@ mask_fan = [0] * 30
 for x in X:
     for y in Y:
         mask_zheng[x + y] += gobit[(x, y)]
-        mask_fan[14 + x - y] += gobit[(x, y)]
+        mask_fan[14 - x + y] += gobit[(x, y)]
 
 
 # @profile
@@ -51,28 +51,34 @@ def valid(black, white, x, y):
 def legal(black, white, t):
     """返回所有合法落子ind
     根据比赛规则：黑1必须天元，白1 3x3  黑2 5x5  白2没有限制"""
+    stones = black | white
     if t == 0:
         legal_list = [toind(7, 7)]
     elif t == 1:
         legal_list = [
             toind(7 + i, 7 + j) for i in [-1, 0, 1] for j in [-1, 0, 1]
+            if not gobit[(7 + i, 7 + j)] & stones
         ]
     elif t == 2:
         legal_list = [
             toind(7 + i, 7 + j)
             for i in [-2, -1, 0, 1, 2] for j in [-2, -1, 0, 1, 2]
+            if not gobit[(7 + i, 7 + j)] & stones
         ]
-    elif t <= 10:
-        legal_list = [
-            toind(7 + i, 7 + j) for i in range(-4, 5) for j in range(-4, 5)
-        ]
+    # elif t <= 10:
+    #     legal_list = [
+    #         toind(7 + i, 7 + j) for i in range(-4, 5) for j in range(-4, 5)
+    #         if not gobit[(7 + i, 7 + j)] & stones
+    #     ]
     else:
-        legal_list = list(range(config.SIZE))
-    empty = []
-    for ind in legal_list:
-        if valid(black, white, *axis(ind)):
-            empty.append(ind)
-    return empty
+        legal_list = [
+            ind for ind in range(config.SIZE) if not gobit[axis(ind)] & stones
+        ]
+    # empty = []
+    # for ind in legal_list:
+    #     if valid(black, white, *axis(ind)):
+    #         empty.append(ind)
+    return legal_list
 
 
 # @profile
@@ -81,7 +87,7 @@ def check_backup(board, x, y):
     row = board & mask_row[x]
     col = board & mask_col[y]
     zheng = board & mask_zheng[x + y]
-    fan = board & mask_fan[14 + x - y]
+    fan = board & mask_fan[14 - x + y]
     if row & (row << 15) & (row << 30) & (row << 45) & (row << 60) > 0:
         return True
     if col & (col << 1) & (col << 2) & (col << 3) & (col << 4) > 0:
@@ -100,7 +106,7 @@ def check(mine, yours, x, y):
     row = mine & mask_row[x]
     col = mine & mask_col[y]
     zheng = mine & mask_zheng[x + y]
-    fan = mine & mask_fan[14 + x - y]
+    fan = mine & mask_fan[14 - x + y]
     if any(i in complete5 for i in [row, col, zheng, fan]):
         return 1
     # 33 44 判负
@@ -135,17 +141,15 @@ def check(mine, yours, x, y):
 
 def show(black, white):
     """TODO: 根据self.logs改成可视化棋谱，类似AlphaGo围棋SGF图片"""
-    s = ""
     for x in X:
         for y in Y:
             if (black & gobit[(x, y)]):
-                s += 'x'
+                print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
             elif (white & gobit[(x, y)]):
-                s += 'o'
+                print("\033[%d;%d;%dm  \033[0m" % (0, 32, 42), end='')
             else:
-                s += ' '
-        s += '\n'
-    print(s)
+                print("  ", end='')
+        print("")
 
 
 class Game():
@@ -245,18 +249,24 @@ class Game():
 
 
 if __name__ == "__main__":
+
     g = Game()
     g.add(7, 7)
-    g.add(8, 12)
-    g.add(7, 6)
-    g.add(6, 7)
-    g.add(6, 10)
-    g.show()
+    g.add(3, 7)
     g.add(7, 8)
+    g.add(3, 8)
+    g.add(5, 7)
+    g.add(1, 7)
+    g.add(6, 8)
+    g.add(2, 8)
     g.add(7, 9)
-    g.add(7, 5)
-    g.add(4, 4)
-    g.add(7, 4)
+
+    g.add(3, 9)
+    g.add(8, 10)
+    g.add(3, 10)
+    g.add(9, 11)
+    g.add(3, 11)
     g.show()
-    g.white
-    g.black
+    yours = g.white
+    mine = g.black
+    x, y = 7, 9
