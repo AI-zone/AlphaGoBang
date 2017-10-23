@@ -46,7 +46,7 @@ class Server(threading.Thread):
             for i in range(config.MODE):
                 self.socket.send_multipart([
                     self.addr[i],
-                    msgpack.dumps((-1, str(self.g.black), str(self.g.white)))
+                    msgpack.dumps((end, str(self.g.black), str(self.g.white)))
                 ])
 
     def _recv(self):
@@ -60,21 +60,22 @@ class Server(threading.Thread):
         self.offset = np.random.randint(2)
         self._new_game()
 
-        for _ in range(config.L):
+        for _ in range(config.GAMELENGTH):
             self._send()
             x, y = self._recv()
             result = self.g.add(x, y)
-            self.g.show()
             if result in 'BW':
                 self._send(result)
                 return
             elif result == 'F':
                 print('##########')
+        # GAMELENGTH 步后无胜负，算白赢
+        self._send('W')
 
     def run(self):
         np.random.seed()
         self._buildsocket()
-        for _ in range(100):
+        while True:
             self._run_a_round()
             print('Finish a round')
             self.g.show()
@@ -82,5 +83,6 @@ class Server(threading.Thread):
 
 
 if __name__ == "__main__":
-    server = Server(0)
-    server.run()
+    servers = [Server(sid) for sid in range(config.NUMPARALELL)]
+    for s in servers:
+        s.start()

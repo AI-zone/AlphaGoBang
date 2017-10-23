@@ -34,6 +34,8 @@ def move_state(mine, yours, a, check_win=True):
 
 
 def make_mask(action):
+    if config.DISTANCE == 0:
+        return 2**225 - 1
     x, y = axis(action)
     mask = 0
     for i in range(-config.DISTANCE, (config.DISTANCE + 1)):
@@ -121,7 +123,7 @@ class Tree():
         v = self._simulate(begin, simu_step + 1, s_tplus1, isleaf)
         if v == 0:
             #  乱下没结果
-            cur.W += config.PUNISH * (simu_step - begin) / simu_step
+            cur.W += config.PUNISH * (simu_step - begin) / (1 + simu_step)
         else:
             cur.W += v
         return v

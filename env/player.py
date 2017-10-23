@@ -12,12 +12,13 @@ import msgpack
 import msgpack_numpy
 import numpy as np
 import math
-import matplotlib.pyplot as plt
 import config
 
-from ai.mcts_policy import Tree, Node
-from env.gobang import axis, valid, legal, gobit
+from ai.mcts_policy import Tree
+from env.gobang import axis, legal, show, toind
 msgpack_numpy.patch()
+
+warmup_file = open('/data/gobang/warmup', 'a')
 
 
 class Player(multiprocessing.Process):
@@ -32,6 +33,8 @@ class Player(multiprocessing.Process):
         self.tree = Tree()
         self.side = None  # black or white, depends on server
         self.player_id = player_id
+        self.memory = {}  # self.memory[t] = [(mine, yours), action, z]
+        self.round_counter = 0
 
     def _buildsockets(self):
         sockets = {}
@@ -65,38 +68,59 @@ class Player(multiprocessing.Process):
 
     def _get_action(self, board, pi):
         """按pi 温度加权抽样"""
+        if self.sid == 0:
+            # only print server 0
+            print(self.round_counter)
+            show(board[1], board[2])
+        if config.TEMPERATURE == 0:
+            ind = np.argmax(pi)
+            return axis(ind)
         empty = legal(board[1], board[2], board[0])
-        temperature_pi = [math.pow(pi[i], config.TEMPERATURE) for i in empty]
+        temperature_pi = [
+            math.pow(pi[i], 1 / config.TEMPERATURE) for i in empty
+        ]
         sum_pi = sum(temperature_pi)
-        probs = [math.pow(pi[i], config.TEMPERATURE) / sum_pi for i in empty]
+        probs = [
+            math.pow(pi[i], 1 / config.TEMPERATURE) / sum_pi for i in empty
+        ]
         ind = np.random.choice(empty, p=probs)
         return axis(ind)
 
-    def _end_round(self, board):
-        pass
+    def _end_round(self, end):
+        if end == 'B':
+            for t in self.memory:
+                if t % 2 == 0:
+                    self.memory[t][3] = 1
+                else:
+                    self.memory[t][3] = -1
+        elif end == 'W':
+            for t in self.memory:
+                if t % 2 == 0:
+                    self.memory[t][3] = -1
+                else:
+                    self.memory[t][3] = 1
+        for t in self.memory:
+            serielized = [str(i) for i in self.memory[t]]
+            print(','.join(serielized), file=warmup_file)
+        self.memory = {}
+        self.round_counter += 1
+        if self.round_counter % 100 == 0:
+            self.tree = Tree()
 
     def _run_a_round(self):
         while True:
             board = self._recv_server()
-            if board[0] < 0:
+            if isinstance(board[0], str):
                 self._end_round(board)
                 return
-            tstart = time.time()
             pi = self._get_pi(board)
             action = self._get_action(board, pi)
-            print(board[0], time.time() - tstart)
-            # # print in qtconsole
-            # img_show_mat = np.reshape(pi, (15, 15)) / np.max(pi)
-            # black = board[1]
-            # white = board[2]
-            # for ind in range(255):
-            #     x, y = axis(ind)
-            #     if gobit[(x, y)] & black:
-            #         img_show_mat[x, y] = -1
-            #     if gobit[(x, y)] & white:
-            #         img_show_mat[x, y] = -2
-            # plt.imshow(img_show_mat)
-            # plt.show()
+            if board[0] % 2 == 0:
+                mine, yours = board[1], board[2]
+            else:
+                mine, yours = board[2], board[1]
+
+            self.memory[board[0]] = [mine, yours, toind(*action), 0]
             self._send_server(action)
 
     def run(self):
@@ -107,6 +131,9 @@ class Player(multiprocessing.Process):
 
 
 if __name__ == "__main__":
-    players = [Player(0, i) for i in range(config.MODE)]
+    players = [
+        Player(sid, i)
+        for i in range(config.MODE) for sid in range(config.NUMPARALELL)
+    ]
     for p in players:
         p.start()
