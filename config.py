@@ -15,12 +15,12 @@ if NUM_CPU < 10:
 else:
     NUMPARALELL = 15
 
-NUM_SIMULATIONS = 1600
+NUM_SIMULATIONS = 400
 TEMPERATURE = 1
 EXPLORATION = 0.1
 SIZE = 225
 L = 20
-GAMELENGTH = 30
+GAMELENGTH = 45
 
 PUNISH = -0.8  # for no result after L steps
 DISTANCE = 1  # 0 mean no mask

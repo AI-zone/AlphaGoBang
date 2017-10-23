@@ -9,7 +9,11 @@ Created on Sat Aug  5 22:04:19 2017
 import config
 import pickle
 
-complete5, open4, open3 = pickle.load(open('./env/cached.pkl', 'rb'))
+try:
+    complete5, open4, open3 = pickle.load(open('./env/cached.pkl', 'rb'))
+except:
+    complete5, open4, open3 = 0, 0, 0
+    print("run env/cache.py first")
 X = [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe]
 Y = [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe]
 
@@ -195,7 +199,7 @@ class Game():
             if point == 1:
                 return "B"
             elif point == -1:
-                return "W"
+                return "J"
             else:
                 return "P"
         else:

@@ -57,15 +57,14 @@ class Node():
         self.N = 0
         self.W = 0
         self.get_p_v(mine, yours)
-        self.mine = mine
-        self.yours = yours
         self.mask = mask
 
     # @profile
     def get_p_v(self, mine, yours):
         """首次访问时候调用, 建立时不用调用
         例如父节点选边，子节点的v暂时当0，叶子节点（simulate结束时需要调用v）"""
-        self.p, self.v = np.random.random(225), np.random.random()
+        self.p, self.v = np.random.random(225).astype(
+            np.float16), np.random.random()
 
 
 class Tree():
@@ -86,7 +85,7 @@ class Tree():
         else:
             Q = 0
             U = self.nodes[s_t].p[a] * math.sqrt(self.nodes[s_t].N)
-        return Q + U
+        return Q + U * config.EXPLORATION
 
     # @profile
     def _simulate(self, begin, simu_step, s_t, isleaf=0):

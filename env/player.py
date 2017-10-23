@@ -70,7 +70,7 @@ class Player(multiprocessing.Process):
         """按pi 温度加权抽样"""
         if self.sid == 0:
             # only print server 0
-            print(self.round_counter)
+            print(self.round_counter, len(self.tree.nodes))
             show(board[1], board[2])
         if config.TEMPERATURE == 0:
             ind = np.argmax(pi)
@@ -87,18 +87,24 @@ class Player(multiprocessing.Process):
         return axis(ind)
 
     def _end_round(self, end):
-        if end == 'B':
+        if end[0] == 'B':
             for t in self.memory:
                 if t % 2 == 0:
                     self.memory[t][3] = 1
                 else:
                     self.memory[t][3] = -1
-        elif end == 'W':
+        elif end[0] == 'W':
             for t in self.memory:
                 if t % 2 == 0:
                     self.memory[t][3] = -1
                 else:
                     self.memory[t][3] = 1
+        elif end[0] == 'J':
+            for t in self.memory:
+                if t % 2 == 0:
+                    self.memory[t][3] = -2
+                else:
+                    self.memory[t][3] = 2
         for t in self.memory:
             serielized = [str(i) for i in self.memory[t]]
             print(','.join(serielized), file=warmup_file)

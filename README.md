@@ -6,9 +6,11 @@ MCTS and RL!
 
 ## CURRENT STAGE
 
-Finish MCTS (hope so), with randomly choosen (p, v).
+(2017.10.23) 1s /step (1 process) (200 simulations with depth 45), without network evaluation. Clear MCTS Tree every 100 round for memory reasons. 
 
-Speed test, single cpu: 13s / step (800 simulations with depth 40)
+(2017.10.21) Finish MCTS (hope so), with randomly choosen (p, v).
+
+(2017.10.21) Speed test, single process: 13s / step (800 simulations with depth 40)
 
 
 ## MCTS
@@ -43,6 +45,4 @@ Yellow for higher MCTS enhanced policy (based on random prior) and green for 0.
 
 ## Working
 
-* Network.
-* Each player play N board simultaneously, and share ONE TREE. THIS greatly speed up the generation of data.
-* Multiple player. Unfortunately, tree cannot be reused.
+* Update Player Tree search prior

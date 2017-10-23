@@ -64,8 +64,9 @@ class Server(threading.Thread):
             self._send()
             x, y = self._recv()
             result = self.g.add(x, y)
-            if result in 'BW':
+            if result in 'BWJ':
                 self._send(result)
+                print('Finish a round', result)
                 return
             elif result == 'F':
                 print('##########')
@@ -77,7 +78,6 @@ class Server(threading.Thread):
         self._buildsocket()
         while True:
             self._run_a_round()
-            print('Finish a round')
             self.g.show()
             # input("ENTER TO CONTINUE")
 
