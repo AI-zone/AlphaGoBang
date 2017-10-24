@@ -26,7 +26,7 @@ def get_data(data_file_name):
         if len(line) < 10:
             continue
         line = [int(i) for i in line.strip('\n').split(',')]
-        example = np.zeros((15, 15, 2))
+        example = np.zeros((15, 15, 2), dtype=np.float32)
         for channel in range(2):
             tmp = np.fromstring('{0:0225b}'.format(line[channel]),
                                 np.int8) - 48
@@ -38,7 +38,52 @@ def get_data(data_file_name):
     return features, labels, values
 
 
-def train_input_fn():
+def my_numpy_input_fn(x,
+                      y,
+                      batch_size=128,
+                      num_epochs=1,
+                      shuffle=None,
+                      queue_capacity=1000,
+                      num_threads=1):
+    """A numpy_input_fn for multi_head estimator.
+        x: {'key': numpy arrray}
+        y: {'head1': numpy array, 'head2': numpy array, ...}
+
+    """
+    import collections
+    from tensorflow.python.estimator.inputs.queues import feeding_functions
+
+    def input_fn():
+        ordered_dict_x = collections.OrderedDict(
+            sorted(x.items(), key=lambda t: t[0]))
+        target_keys = []
+        for tar_key in y:
+            while tar_key in ordered_dict_x:
+                tar_key += '_n'
+            target_keys.append(tar_key)
+            ordered_dict_x[tar_key] = y[tar_key]
+        queue = feeding_functions._enqueue_data(  # pylint: disable=protected-access
+            ordered_dict_x,
+            queue_capacity,
+            shuffle=shuffle,
+            num_threads=num_threads,
+            enqueue_size=batch_size,
+            num_epochs=num_epochs)
+        features = (queue.dequeue_many(batch_size)
+                    if num_epochs is None else queue.dequeue_up_to(batch_size))
+
+        if features:
+            features.pop(0)
+        features = dict(zip(ordered_dict_x.keys(), features))
+        target = {}
+        for tar_key in target_keys:
+            target[tar_key] = features.pop(tar_key)
+        return features, target
+
+    return input_fn
+
+
+def load_data():
     data_file_name = '/data/gobang/warmup'
     features, labels, values = get_data(data_file_name)
     features = np.array(features)
@@ -48,7 +93,8 @@ def train_input_fn():
 
 
 if __name__ == "__main__":
-
+    x, y = load_data()
+    train_input_fn = my_numpy_input_fn(x, y)
     est_config = tf.estimator.RunConfig()
     est_config.replace(
         keep_checkpoint_max=1,

@@ -109,9 +109,9 @@ def model_fn(features, labels, mode, params, config):
     logits = {"policy": logits_head1, "value": logits_head2}
 
     head1 = tf.contrib.learn.multi_class_head(
-        n_classes=225, label_name='pi', head_name="policy")
+        n_classes=225, label_name='policy', head_name="policy")
     head2 = tf.contrib.learn.regression_head(
-        label_name='pi', head_name="value")
+        label_name='value', head_name="value")
     head = tf.contrib.learn.multi_head([head1, head2])
 
     def _train_op_fn(loss):
