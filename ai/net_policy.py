@@ -106,7 +106,7 @@ if __name__ == "__main__":
     classifier = tf.estimator.Estimator(
         model_fn=model_fn,
         params=params,
-        model_dir="/tmp/test_resnet",
+        model_dir="/data/gobang/models/test_resnet/",
         config=est_config)
 
     classifier.train(input_fn=train_input_fn)

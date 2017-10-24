@@ -83,7 +83,7 @@ def model_fn(features, labels, mode, params, config):
     training = mode == tf.estimator.ModeKeys.TRAIN
     last_hidden_layer = _get_logits(
         features['x'], params['conv_filters'], training=training)
-
+    print(last_hidden_layer.get_shape())
     # policy head
     logits_head1 = tf.layers.conv2d(
         last_hidden_layer,
@@ -94,6 +94,9 @@ def model_fn(features, labels, mode, params, config):
     logits_head1 = tf.layers.batch_normalization(
         logits_head1, scale=False, training=training)
     logits_head1 = tf.nn.relu(logits_head1)
+    logits_head1 = tf.layers.flatten(logits_head1)
+    logits_head1 = tf.layers.dense(logits_head1, 225, activation=None)
+
     # value head
     logits_head2 = tf.layers.conv2d(
         last_hidden_layer,
@@ -105,20 +108,20 @@ def model_fn(features, labels, mode, params, config):
         logits_head2, scale=False, training=training)
     logits_head2 = tf.nn.relu(logits_head2)
     logits_head2 = tf.layers.dense(logits_head2, 256, activation=tf.nn.relu)
+    logits_head2 = tf.layers.flatten(logits_head2)
     logits_head2 = tf.layers.dense(logits_head2, 1, activation=tf.tanh)
-    logits = {"policy": logits_head1, "value": logits_head2}
 
-    head1 = tf.contrib.learn.multi_class_head(
-        n_classes=225, label_name='policy', head_name="policy")
-    head2 = tf.contrib.learn.regression_head(
-        label_name='value', head_name="value")
-    head = tf.contrib.learn.multi_head([head1, head2])
+    logits = {"policy": logits_head1, "value": logits_head2}
+    print(logits_head1.get_shape(), logits_head2.get_shape())
+    head1 = tf.contrib.estimator.multi_class_head(n_classes=225, name="policy")
+    head2 = tf.contrib.estimator.regression_head(name="value")
+    head = tf.contrib.estimator.multi_head([head1, head2])
 
     def _train_op_fn(loss):
-        optimizer = tf.train.AdamOptimizer(config.LEARNINGRATE)
+        optimizer = tf.train.AdamOptimizer(params['learning_rate'])
         return optimizer.minimize(loss)
 
-    return head.create_model_fn_ops(
+    return head.create_estimator_spec(
         features=features,
         labels=labels,
         mode=mode,
