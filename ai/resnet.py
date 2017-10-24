@@ -10,10 +10,9 @@ import config
 import tensorflow as tf
 
 
-def _get_logits(image, conv_filters, dense_nodes, n_classes, training):
+def _get_logits(image, conv_filters, training):
 
     conv_initializer = tf.contrib.layers.xavier_initializer()
-    fc_initializer = tf.contrib.layers.xavier_initializer()
     x = image
     # 1 conv
     x = tf.layers.conv2d(
@@ -49,23 +48,6 @@ def _get_logits(image, conv_filters, dense_nodes, n_classes, training):
         inter = x + inter
         x = tf.nn.relu(inter)
 
-    # 2-head output, head1 for policy
-    x1 = tf.layers.conv2d(
-        x,
-        filters=2,
-        kernel_size=(1, 1),
-        padding='SAME',
-        activation=None,
-        kernel_initializer=conv_initializer)
-    x1 = tf.layers.batch_normalization(x1, scale=False, training=training)
-    x1 = tf.nn.relu(x1)
-
-    x1 = tf.contrib.layers.flatten(x1)
-    head1 = tf.layers.dense(
-        x1, 225, activation=tf.nn.relu, kernel_initializer=fc_initializer)
-
-    # 2-head output, head1 for value
-
     return x
 
 
@@ -99,14 +81,35 @@ def _get_accuracy(labels, predictions):
 def model_fn(features, labels, mode, params, config):
     """bn version tower."""
     training = mode == tf.estimator.ModeKeys.TRAIN
-    logits = _get_logits(
-        features['x'],
-        params['conv_filters'],
-        params['dense_nodes'],
-        params['n_classes'],
-        training=training)
+    last_hidden_layer = _get_logits(
+        features['x'], params['conv_filters'], training=training)
+
+    # policy head
+    logits_head1 = tf.layers.conv2d(
+        last_hidden_layer,
+        filters=2,
+        kernel_size=(1, 1),
+        padding='SAME',
+        activation=None)
+    logits_head1 = tf.layers.batch_normalization(
+        logits_head1, scale=False, training=training)
+    logits_head1 = tf.nn.relu(logits_head1)
+    # value head
+    logits_head2 = tf.layers.conv2d(
+        last_hidden_layer,
+        filters=1,
+        kernel_size=(1, 1),
+        padding='SAME',
+        activation=None)
+    logits_head2 = tf.layers.batch_normalization(
+        logits_head2, scale=False, training=training)
+    logits_head2 = tf.nn.relu(logits_head2)
+    logits_head2 = tf.layers.dense(logits_head2, 256, activation=tf.nn.relu)
+    logits_head2 = tf.layers.dense(logits_head2, 1, activation=tf.tanh)
+    logits = {"policy": logits_head1, "value": logits_head2}
+
     head1 = tf.contrib.learn.multi_class_head(
-        n_classes=params['n_classes'], label_name='pi', head_name="policy")
+        n_classes=225, label_name='pi', head_name="policy")
     head2 = tf.contrib.learn.regression_head(
         label_name='pi', head_name="value")
     head = tf.contrib.learn.multi_head([head1, head2])
@@ -121,3 +124,20 @@ def model_fn(features, labels, mode, params, config):
         mode=mode,
         train_op_fn=_train_op_fn,
         logits=logits)
+
+
+if __name__ == "__main__":
+    # test net
+    est_config = tf.estimator.RunConfig()
+    est_config.replace(
+        keep_checkpoint_max=1,
+        save_checkpoints_steps=500,
+        session_config=tf.ConfigProto(),
+        save_checkpoints_secs=None,
+        save_summary_steps=1000)
+    params = dict(conv_filters=[256, 256, 256], learning_rate=0.001)
+    classifier = tf.estimator.Estimator(
+        model_fn=model_fn,
+        params=params,
+        model_dir="/tmp/test_resnet",
+        config=est_config)
