@@ -15,7 +15,7 @@ class Gomoku():
         self.going = True
         self.ai_turn = True  # 可修改先后顺序
         self.chessboard = Chessboard()
-        self.step = 0
+        self.step = -1
 
     def loop(self):
         while self.going:
@@ -49,7 +49,7 @@ class Gomoku():
         # self.chessboard.game_over = True
         # self.chessboard.winner = 'b' or 'w'
 
-        if(self.step > 15):
+        if(self.step > 120):
             self.chessboard.game_over = True
             self.chessboard.winner = 'b'
 
