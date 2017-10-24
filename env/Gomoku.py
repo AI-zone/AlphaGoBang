@@ -16,6 +16,17 @@ class Gomoku():
         self.ai_turn = True  # 可修改先后顺序
         self.chessboard = Chessboard()
         self.step = -1
+        self.init_chessboard_list = [(7, 7), (0, 0)]  # 在这里修改棋盘
+
+    def init_chessboard(self):
+        for (x, y) in self.init_chessboard_list:
+            if self.chessboard.set_piece(x, y):
+                self.step += 1
+            else:
+                print("init_chessboard failed... exit")
+                self.going = False
+                return
+        self.ai_turn = (self.step % 2 == 0 ^ self.ai_turn)
 
     def loop(self):
         while self.going:
@@ -69,4 +80,5 @@ class Gomoku():
 
 if __name__ == '__main__':
     game = Gomoku()
+    game.init_chessboard()
     game.loop()
