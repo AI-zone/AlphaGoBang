@@ -128,7 +128,6 @@ def check(mine, yours, x, y):
                 valid_n = all(gobit[axis(i)] & mine == 0 for i in info[2])
                 if valid_e and valid_n:
                     num3 += 1
-                    show(case, 0)
                     break
         if case in open4:
             for info in open4[case]:
