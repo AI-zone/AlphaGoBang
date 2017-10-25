@@ -92,20 +92,24 @@ def my_numpy_input_fn(x,
 def load_data():
     data_file_name = '/data/gobang/warmup'
     features, labels, values = get_data(data_file_name)
-    features = np.array(features)
-    labels1 = np.array(labels)
-    labels2 = np.array(values)
-    train_size = int(features * 0.9)
+    train_size = int(len(features) * 0.9)
+    afeatures = np.array(features[:train_size])
+    alabels1 = np.array(labels[:train_size])
+    alabels2 = np.array(values[:train_size])
+    bfeatures = np.array(features[train_size:])
+    blabels1 = np.array(labels[train_size:])
+    blabels2 = np.array(values[train_size:])
+
     return {
-        'x': features[:train_size]
+        'x': afeatures
     }, {
-        'policy': labels1[:train_size],
-        'value': labels2[:train_size]
+        'policy': alabels1,
+        'value': alabels2
     }, {
-        'x': features[train_size:]
+        'x': bfeatures
     }, {
-        'policy': labels1[train_size:],
-        'value': labels2[train_size:]
+        'policy': blabels1,
+        'value': blabels2
     }
 
 
