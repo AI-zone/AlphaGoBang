@@ -112,6 +112,7 @@ def model_fn(features, labels, mode, params, config):
     logits_head2 = tf.layers.dense(logits_head2, 1, activation=tf.tanh)
 
     logits = {"policy": logits_head1, "value": logits_head2}
+    # logits = logits_head2
     print(logits_head1.get_shape(), logits_head2.get_shape())
     head1 = tf.contrib.estimator.multi_class_head(n_classes=225, name="policy")
     head2 = tf.contrib.estimator.regression_head(name="value")
