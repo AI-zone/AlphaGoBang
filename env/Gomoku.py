@@ -41,8 +41,10 @@ class Gomoku():
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 self.going = False
-            elif (e.type == pygame.MOUSEBUTTONDOWN) or (e.type == 6):
+            elif (e.type == pygame.MOUSEBUTTONUP):
+
                 x, y = self.chessboard.handle_key_event(e)
+                print(x, y)
                 if x > 0:
                     self.INFO = self.g.add(x, y)
 
