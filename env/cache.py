@@ -78,8 +78,7 @@ print("complete5")
 
 # open 4 and open3
 for x in range(15):
-    # 一行最少要4个子， 最多只能12个子，否则长连
-    for num_y in range(4, 13):
+    for num_y in range(4, 16):
         possible_y = itertools.combinations(list(range(15)), num_y)
         for select_set in possible_y:
             row_sum = sum([gobit[x, i] for i in select_set])
@@ -123,7 +122,7 @@ for x in range(15):
                                 open3[left_sum].append((new_s, new_e, new_n))
 print("complete5")
 for x in range(15):
-    for num_y in range(4, 13):
+    for num_y in range(4, 16):
         possible_y = itertools.combinations(list(range(15)), num_y)
         for select_set in possible_y:
             col_sum = sum([gobit[i, x] for i in select_set])
@@ -164,7 +163,7 @@ print("complete5")
 # fan  line_id = 14 - x + y
 
 for line_id in range(5, 24):
-    for num_y in range(4, 15):  # number of stones in a line
+    for num_y in range(4, 16):  # number of stones in a line
         max_stone_num = 15 - abs(14 - line_id)
         y_range = list(range(0, max_stone_num)) if line_id <= 14 else list(
             range(15 - max_stone_num, 15))
@@ -217,7 +216,7 @@ print("complete5")
 
 # zheng line_id x+y
 for line_id in range(5, 24):
-    for num_y in range(4, 15):
+    for num_y in range(4, 16):
         max_stone_num = 15 - abs(14 - line_id)
         y_range = list(range(0, max_stone_num)) if line_id <= 14 else list(
             range(15 - max_stone_num, 15))
@@ -236,38 +235,39 @@ for line_id in range(5, 24):
                 for begin in [y_range[0] - 1] + y_range:
                     if begin + 6 > 14:
                         continue
-                mine = [begin + i for i in [2, 3, 4, 5]]
-                nomine = [
-                    begin + i for i in [0, 7]
-                    if (begin + i >= 0) and (begin + i <= 14)
-                ]
-                empty = [begin + 1, begin + 6]
+                    mine = [begin + i for i in [2, 3, 4, 5]]
+                    nomine = [
+                        begin + i for i in [0, 7]
+                        if (begin + i >= 0) and (begin + i <= 14)
+                    ]
+                    empty = [begin + 1, begin + 6]
 
-                valid_empty = all(
-                    toind(line_id - y, y) not in select_set for y in empty)
-                valid_mine = all(
-                    toind(line_id - y, y) in select_set for y in mine)
-                valid_nomine = all(
-                    toind(line_id - y, y) not in select_set for y in nomine)
+                    valid_empty = all(
+                        toind(line_id - y, y) not in select_set for y in empty)
+                    valid_mine = all(
+                        toind(line_id - y, y) in select_set for y in mine)
+                    valid_nomine = all(
+                        toind(line_id - y, y) not in select_set
+                        for y in nomine)
 
-                if valid_empty and valid_mine and valid_nomine:
-                    open4[zheng_sum].append(
-                        ([toind(line_id - y, y) for y in mine],
-                         [toind(line_id - y, y) for y in empty],
-                         [toind(line_id - y, y) for y in nomine]))
-                    for remove in open4[zheng_sum][-1][0]:
-                        left_sum = zheng_sum - gobit[axis(remove)]
-                        new_s = open4[zheng_sum][-1][0][:]
-                        new_s.remove(remove)
-                        new_e = open4[zheng_sum][-1][1][:]
-                        new_e.append(remove)
-                        new_n = open4[zheng_sum][-1][2][:]
-                        if (new_s, new_e) not in open3[left_sum]:
-                            open3[left_sum].append((new_s, new_e, new_n))
+                    if valid_empty and valid_mine and valid_nomine:
+                        open4[zheng_sum].append(
+                            ([toind(line_id - y, y) for y in mine],
+                             [toind(line_id - y, y) for y in empty],
+                             [toind(line_id - y, y) for y in nomine]))
+                        for remove in open4[zheng_sum][-1][0]:
+                            left_sum = zheng_sum - gobit[axis(remove)]
+                            new_s = open4[zheng_sum][-1][0][:]
+                            new_s.remove(remove)
+                            new_e = open4[zheng_sum][-1][1][:]
+                            new_e.append(remove)
+                            new_n = open4[zheng_sum][-1][2][:]
+                            if (new_s, new_e) not in open3[left_sum]:
+                                open3[left_sum].append((new_s, new_e, new_n))
 print("complete5")
 tmp = list(open4.keys())
-test = 365380984604097252011155841681389701486383988736
-test_id = random.randrange(len(tmp))
-show(tmp[test_id], 0)
+test = sum(gobit[(14 - i, i)] for i in [2, 3, 4, 5])
+show(test, 0)
+test in open4
 len(tmp)
 pickle.dump((complete5, open4, open3), open('./env/cached.pkl', 'wb'))

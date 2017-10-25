@@ -128,6 +128,7 @@ def check(mine, yours, x, y):
                 valid_n = all(gobit[axis(i)] & mine == 0 for i in info[2])
                 if valid_e and valid_n:
                     num3 += 1
+                    show(case, 0)
                     break
         if case in open4:
             for info in open4[case]:
@@ -255,22 +256,13 @@ class Game():
 if __name__ == "__main__":
 
     g = Game()
-    g.add(7, 7)
-    g.add(3, 7)
-    g.add(7, 8)
-    g.add(3, 8)
-    g.add(5, 7)
-    g.add(1, 7)
-    g.add(6, 8)
-    g.add(2, 8)
-    g.add(7, 9)
-
-    g.add(3, 9)
-    g.add(8, 10)
-    g.add(3, 10)
-    g.add(9, 11)
-    g.add(3, 11)
+    blacks = [(7, 7), (8, 8), (10, 8), (11, 7), (9, 9)]
+    whites = [(0, i) for i in range(len(blacks) - 1)]
+    for i in range(len(whites)):
+        g.add(*blacks[i])
+        g.add(*whites[i])
+    res = g.add(*blacks[-1])
     g.show()
-    yours = g.white
+    x, y = blacks[-1]
     mine = g.black
-    x, y = 7, 9
+    yours = g.white

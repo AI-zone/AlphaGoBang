@@ -120,7 +120,7 @@ def model_fn(features, labels, mode, params, config):
 
     def _train_op_fn(loss):
         optimizer = tf.train.AdamOptimizer(params['learning_rate'])
-        return optimizer.minimize(loss)
+        return optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
     return head.create_estimator_spec(
         features=features,
