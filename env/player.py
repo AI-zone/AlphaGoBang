@@ -43,8 +43,7 @@ class Player(multiprocessing.Process):
         self.server_socket.setsockopt_string(zmq.IDENTITY, str(self.player_id))
         self.server_socket.connect('ipc://./tmp/server' + str(self.sid))
         self.server_socket.send(msgpack.dumps(self.player_id))
-        # self.net_socket = context.socket(zmq.DEALER)
-        # self.net_socket.connect('ipc://./tmp/net' + str(self.sid))
+
         print("FINISH build socket")
 
     def _recv_server(self):

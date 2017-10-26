@@ -1,10 +1,14 @@
 import sys
-sys.path.append("/Users/chenyu/dllab/AlphaGoBang/")
 import numpy as np
 import math
 import random
 import config
+import zmq
+import msgpack
+import msgpack_numpy
 from env.gobang import valid, check, axis, gobit, legal, show
+import numpy as np
+msgpack_numpy.patch()
 
 
 def plot_pi(mine, yours, pi):
