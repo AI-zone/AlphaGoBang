@@ -115,6 +115,9 @@ def load_data():
 
 if __name__ == "__main__":
     train_x, train_y, test_x, test_y = load_data()
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
+    session_config = tf.ConfigProto(gpu_options=gpu_options)
+    config = tf.estimator.RunConfig(session_config=session_config)
 
     train_input_fn = my_numpy_input_fn(train_x, train_y)
     test_input_fn = my_numpy_input_fn(test_x, test_y)
@@ -122,7 +125,8 @@ if __name__ == "__main__":
     classifier = tf.estimator.Estimator(
         model_fn=model_fn,
         params=params,
-        model_dir="/data/gobang/models/test_resnet/")
+        model_dir="/data/gobang/models/test_resnet/",
+        config=config)
 
     while True:
         try:
