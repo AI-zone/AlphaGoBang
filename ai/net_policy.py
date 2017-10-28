@@ -64,8 +64,6 @@ def my_numpy_input_fn(x,
             sorted(x.items(), key=lambda t: t[0]))
         target_keys = []
         for tar_key in y:
-            while tar_key in ordered_dict_x:
-                tar_key += '_n'
             target_keys.append(tar_key)
             ordered_dict_x[tar_key] = y[tar_key]
         queue = feeding_functions._enqueue_data(  # pylint: disable=protected-access
