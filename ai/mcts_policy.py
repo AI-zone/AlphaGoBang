@@ -138,7 +138,7 @@ class Tree():
         if s_t not in self.nodes:
             #  见过就复用，否则创建新节点
             new_mask = gobit[(7, 7)]
-            for ind in range(255):
+            for ind in range(225):
                 if gobit[axis(ind)] & (s_t[0] | s_t[1]):
                     new_mask = new_mask | make_mask(ind)
             self.nodes[s_t] = Node(t, *s_t, new_mask)
