@@ -26,3 +26,5 @@ PUNISH = -0.8  # for no result after L steps
 DISTANCE = 1  # 0 mean no mask
 
 LEARNINGRATE = 0.001
+
+INFERENCE_BATCHSIZE = 256
