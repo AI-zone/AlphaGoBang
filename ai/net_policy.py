@@ -23,7 +23,7 @@ def get_data(data_file_name):
     labels = []
     values = []
     for line in f:
-        if len(line) < 10:
+        if len(line) < 3:
             continue
         line = [int(i) for i in line.strip('\n').split(',')]
         if len(line) != 4:
@@ -138,4 +138,10 @@ if __name__ == "__main__":
                 servable_model_dir, export_input_fn)
         except KeyboardInterrupt:
             print("USER interrupt")
+            features = {'x': tf.placeholder(tf.float32, [None, 15, 15, 2])}
+            export_input_fn = tf.estimator.export.build_raw_serving_input_receiver_fn(
+                features)
+            servable_model_dir = "/data/gobang/init"
+            servable_model_path = classifier.export_savedmodel(
+                servable_model_dir, export_input_fn)
             break
