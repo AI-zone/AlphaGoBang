@@ -10,6 +10,8 @@ from env.gobang import valid, check, axis, gobit, legal, show
 import numpy as np
 msgpack_numpy.patch()
 
+# pylint: disable-msg=C0103
+
 
 def plot_pi(mine, yours, pi):
     pi = pi / sum(pi) * 100
@@ -73,10 +75,11 @@ class Node():
 
 class Tree():
     """MCTS."""
-    __slots__ = ['nodes', 'mask']
+    __slots__ = ['nodes', 'mask', 'socket']
 
     def __init__(self):
         self.nodes = {}
+        self.socket = None
         self._buildsockets()
 
     def _buildsockets(self):
@@ -87,7 +90,7 @@ class Tree():
     # @profile
     def QnU(self, s_t, a):
         """返回行动a的Q, a:0-224."""
-        next_s, isleaf = move_state(*s_t, a, False)
+        next_s, _ = move_state(*s_t, a, False)
         if next_s in self.nodes:
             Q = self.nodes[next_s].W / self.nodes[next_s].N
             U = self.nodes[s_t].p[a] * math.sqrt(self.nodes[s_t].N) / (
