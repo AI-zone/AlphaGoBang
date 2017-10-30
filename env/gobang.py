@@ -8,6 +8,7 @@ Created on Sat Aug  5 22:04:19 2017
 
 import config
 import pickle
+import numpy as np
 
 try:
     complete5, open4, open3 = pickle.load(open('./env/cached.pkl', 'rb'))
@@ -42,6 +43,20 @@ def axis(ind):
 
 def toind(x, y):
     return x + 15 * y
+
+
+def int2array(line):
+    """
+    line: [binary1, binary2]
+    return: np.array((15, 15, 2))
+    """
+    example = np.zeros((15, 15, 2), dtype=np.float32)
+    for channel in range(2):
+        intstr = str(bin(int(line[channel]))[2:].zfill(225))
+        tmp = np.fromstring(intstr[::-1], np.int8) - 48
+        tmp = tmp.reshape((15, 15))
+        example[:, :, channel] = tmp.T
+    return example
 
 
 # @profile
@@ -150,6 +165,20 @@ def show(black, white):
             if (black & gobit[(x, y)]):
                 print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
             elif (white & gobit[(x, y)]):
+                print("\033[%d;%d;%dm  \033[0m" % (0, 32, 42), end='')
+            else:
+                print("  ", end='')
+        print("")
+
+
+def show_np(mat):
+    for x in range(15):
+        for y in range(15):
+            if (x == 7) and (y == 7):
+                print("\033[%d;%d;%dm  \033[0m" % (0, 33, 43), end='')
+            elif mat[x, y, 0] > 0:
+                print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
+            elif mat[x, y, 1] > 0:
                 print("\033[%d;%d;%dm  \033[0m" % (0, 32, 42), end='')
             else:
                 print("  ", end='')

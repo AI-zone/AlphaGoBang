@@ -14,7 +14,8 @@ import tensorflow as tf
 import numpy as np
 import config
 
-from ai.resnet import model_fn
+from ai.net import model_fn
+from env.gobang import show_np, axis, int2array
 
 
 def get_data(data_file_name):
@@ -32,12 +33,7 @@ def get_data(data_file_name):
             continue
         if abs(line[-1]) == 2:
             line[-1] = line[-1] / 2
-        example = np.zeros((15, 15, 2), dtype=np.float32)
-        for channel in range(2):
-            tmp = np.fromstring('{0:0225b}'.format(line[channel]),
-                                np.int8) - 48
-            tmp = tmp.reshape((15, 15))
-            example[:, :, channel] = tmp
+        example = int2array(line[0:2])
         features.append(example)
         labels.append(line[2])
         values.append(line[3])
@@ -49,8 +45,8 @@ def my_numpy_input_fn(x,
                       batch_size=128,
                       num_epochs=1,
                       shuffle=True,
-                      queue_capacity=10000,
-                      num_threads=10):
+                      queue_capacity=2000,
+                      num_threads=1):
     """A numpy_input_fn for multi_head estimator.
         x: {'key': numpy arrray}
         y: {'head1': numpy array, 'head2': numpy array, ...}
@@ -90,7 +86,7 @@ def my_numpy_input_fn(x,
 def load_data():
     data_file_name = '/data/gobang/warmup'
     features, labels, values = get_data(data_file_name)
-    train_size = int(len(features) * 0.9)
+    train_size = int(len(features) * 0.8)
     afeatures = np.array(features[:train_size])
     alabels1 = np.array(labels[:train_size])
     alabels2 = np.array(values[:train_size])
@@ -119,7 +115,7 @@ if __name__ == "__main__":
 
     train_input_fn = my_numpy_input_fn(train_x, train_y)
     test_input_fn = my_numpy_input_fn(test_x, test_y)
-    params = dict(conv_filters=[256, 256, 256], learning_rate=0.001)
+    params = dict(conv_filters=[24] * 4, learning_rate=0.005)
     classifier = tf.estimator.Estimator(
         model_fn=model_fn,
         params=params,

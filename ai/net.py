@@ -10,7 +10,7 @@ import config
 import tensorflow as tf
 
 
-def _get_logits(image, conv_filters, training):
+def _resnet_logits(image, conv_filters, training):
 
     conv_initializer = tf.contrib.layers.xavier_initializer()
     x = image
@@ -51,37 +51,37 @@ def _get_logits(image, conv_filters, training):
     return x
 
 
-def _get_confidences(self, logits):
-    return tf.nn.softmax(logits)
+def _bnconv_logits(image, conv_filters, training):
 
-
-def _get_loss(logits, labels):
-    loss = tf.reduce_sum(
-        tf.nn.sparse_softmax_cross_entropy_with_logits(
-            labels=labels, logits=logits),
-        name='loss')
-    tf.summary.scalar('loss', loss)
-    return loss
-
-
-def _get_predictions(logits):
-    return tf.argmax(logits, axis=-1)
-
-
-def _get_accuracy(labels, predictions):
-    acc1 = tf.metrics.mean(
-        tf.nn.in_top_k(predictions=predictions, targets=labels, k=1))
-    acc2 = tf.metrics.mean(
-        tf.nn.in_top_k(predictions=predictions, targets=labels, k=2))
-    tf.summary.scalar('acc1', acc1)
-    tf.summary.scalar('acc2', acc2)
-    return {'top1acc:': acc1, 'top2acc': acc2}
+    conv_initializer = tf.contrib.layers.xavier_initializer()
+    x = image
+    # 1 conv
+    x = tf.layers.conv2d(
+        x,
+        filters=conv_filters[0],
+        kernel_size=(3, 3),
+        padding='SAME',
+        activation=None,
+        kernel_initializer=conv_initializer)
+    x = tf.layers.batch_normalization(x, scale=False, training=training)
+    x = tf.nn.relu(x)
+    for n in conv_filters[1:]:
+        x = tf.layers.conv2d(
+            x,
+            filters=n,
+            kernel_size=(3, 3),
+            padding='SAME',
+            activation=None,
+            kernel_initializer=conv_initializer)
+        x = tf.layers.batch_normalization(x, scale=False, training=training)
+        x = tf.nn.relu(x)
+    return x
 
 
 def model_fn(features, labels, mode, params, config):
     """bn version tower."""
     training = mode == tf.estimator.ModeKeys.TRAIN
-    last_hidden_layer = _get_logits(
+    last_hidden_layer = _bnconv_logits(
         features['x'], params['conv_filters'], training=training)
     print(last_hidden_layer.get_shape())
     # policy head
@@ -107,7 +107,7 @@ def model_fn(features, labels, mode, params, config):
     logits_head2 = tf.layers.batch_normalization(
         logits_head2, scale=False, training=training)
     logits_head2 = tf.nn.relu(logits_head2)
-    logits_head2 = tf.layers.dense(logits_head2, 256, activation=tf.nn.relu)
+    logits_head2 = tf.layers.dense(logits_head2, 16, activation=tf.nn.relu)
     logits_head2 = tf.layers.flatten(logits_head2)
     logits_head2 = tf.layers.dense(logits_head2, 1, activation=tf.tanh)
 
@@ -119,7 +119,10 @@ def model_fn(features, labels, mode, params, config):
     head = tf.contrib.estimator.multi_head([head1, head2])
 
     def _train_op_fn(loss):
-        optimizer = tf.train.AdamOptimizer(params['learning_rate'])
+        # optimizer = tf.train.AdamOptimizer(params['learning_rate'])
+        optimizer = tf.train.ProximalAdagradOptimizer(
+            learning_rate=params['learning_rate'],
+            l2_regularization_strength=0.05)
         return optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
     return head.create_estimator_spec(
@@ -132,16 +135,4 @@ def model_fn(features, labels, mode, params, config):
 
 if __name__ == "__main__":
     # test net
-    est_config = tf.estimator.RunConfig()
-    est_config.replace(
-        keep_checkpoint_max=1,
-        save_checkpoints_steps=500,
-        session_config=tf.ConfigProto(),
-        save_checkpoints_secs=None,
-        save_summary_steps=1000)
-    params = dict(conv_filters=[256, 256, 256], learning_rate=0.001)
-    classifier = tf.estimator.Estimator(
-        model_fn=model_fn,
-        params=params,
-        model_dir="/tmp/test_resnet",
-        config=est_config)
+    pass

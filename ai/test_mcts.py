@@ -19,9 +19,9 @@ class Tester(object):
         self.socket.connect('ipc://./tmp/oracle_recv.ipc')
         print("FINISH build socket")
 
-    def send(self, mine, yours):
-        print(mine, yours)
-        self.socket.send(msgpack.dumps((str(mine), str(yours), self.identity)))
+    def send_batch(self, batch_data):
+        batch_data = [(str(i[0]), str(i[1])) for i in batch_data]
+        self.socket.send(msgpack.dumps((batch_data, self.identity)))
 
     def recv(self):
         content = self.socket.recv()
@@ -34,6 +34,6 @@ if __name__ == "__main__":
     g = Game()
     g.add(7, 7)
     g.add(7, 8)
-    for i in range(10):
-        tester.send(g.black, g.white)
+    for i in range(2):
+        tester.send_batch([(g.black, g.white)] * 10)
     #content = tester.recv()
