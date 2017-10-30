@@ -42,25 +42,25 @@ class Runner():
 
     def _build_recv_sockets(self):
         context = zmq.Context()
-        self.socket = context.socket(zmq.DEALER)
+        self.socket = context.socket(zmq.PULL)
         self.socket.setsockopt(zmq.IDENTITY, self.identity)
-        self.socket.connect('ipc://./tmp/oracle_recv.ipc')
+        self.socket.bind('ipc://./tmp/oracle_recv.ipc')
         print("FINISH build socket")
 
     def _continuous_recv(self):
         self._build_recv_sockets()
         while True:
-            print('start receiving')
             content = self.socket.recv()
+            content = msgpack.loads(content)
             print(content)
-            content, identity = msgpack.loads(content)
             example = np.zeros((15, 15, 2), dtype=np.float32)
             for channel in range(2):
-                tmp = np.fromstring('{0:0225b}'.format(content[channel]),
-                                    np.int8) - 48
+                tmp = np.fromstring(
+                    str(bin(int(content[channel]))[2:].zfill(225)),
+                    np.int8) - 48
                 tmp = tmp.reshape((15, 15))
                 example[:, :, channel] = tmp
-                self.queue.append((example, identity))
+                self.queue.append((example, content[2]))
 
     def _get_all_or_a_batch(self):
         while True:
@@ -97,11 +97,11 @@ class Runner():
 
 
 if __name__ == "__main__":
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
-    session_config = tf.ConfigProto(gpu_options=gpu_options)
-    sess = tf.Session(config=session_config)
-    with sess.as_default():
-        policy_fn, value_fn = call_saved_model()
-        runner = Runner(policy_fn, value_fn)
-
-        runner.run()
+    # gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
+    # session_config = tf.ConfigProto(gpu_options=gpu_options)
+    # sess = tf.Session(config=session_config)
+    # with sess.as_default():
+    #     policy_fn, value_fn = call_saved_model()
+    #     runner = Runner(policy_fn, value_fn)
+    runner = Runner(0, 0)
+    runner.run()
