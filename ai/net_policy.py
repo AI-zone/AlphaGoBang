@@ -132,7 +132,7 @@ if __name__ == "__main__":
             classifier.evaluate(input_fn=test_input_fn)
             features = {'x': tf.placeholder(tf.float32, [None, 15, 15, 2])}
             export_input_fn = tf.estimator.export.build_raw_serving_input_receiver_fn(
-                features, default_batch_size=1)
+                features)
             servable_model_dir = "/data/gobang/init"
             servable_model_path = classifier.export_savedmodel(
                 servable_model_dir, export_input_fn)
