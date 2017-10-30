@@ -28,7 +28,7 @@ def call_saved_model():
     return predictor.from_saved_model('/data/gobang/init/1509028062')
 
 
-class Predictor(object):
+class Runner(object):
     def __init__(self, predict_fn):
         self.cache = {}
         self.queue = blist()
@@ -87,5 +87,5 @@ if __name__ == "__main__":
     sess = tf.Session(config=session_config)
     with sess.as_default():
         predict_fn = call_saved_model()
-        predictor = Predictor(predict_fn)
-        predictor.strat()
+        runner = Runner(predict_fn)
+        runner.strat()

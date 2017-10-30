@@ -77,6 +77,12 @@ class Tree():
 
     def __init__(self):
         self.nodes = {}
+        self._buildsockets()
+
+    def _buildsockets(self):
+        context = zmq.Context()
+        self.socket = context.socket(zmq.ROUTER)
+        self.socket.bind('ipc://./tmp/oracle')
 
     # @profile
     def QnU(self, s_t, a):
