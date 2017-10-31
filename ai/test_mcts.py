@@ -35,8 +35,8 @@ if __name__ == "__main__":
     tester = Tester()
     f = open('/data/gobang/warmup', 'r').readlines()
     import random
-    for i in range(1):
+    for i in range(5):
         line = random.choice(f).split(',')
         show(int(line[0]), int(line[1]))
-        print(line[2])
+        print(axis(int(line[2])), line[2])
         tester.send_batch([(line[0], line[1])])

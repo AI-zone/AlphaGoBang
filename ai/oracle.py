@@ -25,9 +25,10 @@ msgpack_numpy.patch()
 
 
 def call_saved_model():
-    model_list = os.listdir('./models/')
+    model_path = '/data/gobang/aipath/'
+    model_list = os.listdir(model_path)
     model_list.sort()
-    best_model = './models/' + model_list[-1]
+    best_model = model_path + model_list[-1]
     policy_fn = predictor.from_saved_model(
         best_model, signature_def_key='predict/policy')
     value_fn = predictor.from_saved_model(
@@ -70,8 +71,8 @@ class Runner():
             features, identity = self._continuous_recv()
             p = self.policy_fn({'x': features})
             v = self.value_fn({'x': features})
-            print("This is p", p)
-            print("This is v", v)
+            print(p['classes'], v)
+
             # self._reply((p, v), identity)
 
 

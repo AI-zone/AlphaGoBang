@@ -53,27 +53,20 @@ def _resnet_logits(image, conv_filters, training):
 
 def _bnconv_logits(image, conv_filters, training):
 
-    conv_initializer = tf.contrib.layers.xavier_initializer()
     x = image
     # 1 conv
     x = tf.layers.conv2d(
         x,
         filters=conv_filters[0],
-        kernel_size=(3, 3),
+        kernel_size=(5, 5),
         padding='SAME',
-        activation=None,
-        kernel_initializer=conv_initializer)
-    x = tf.layers.batch_normalization(x, scale=False, training=training)
+        activation=None)
+    # x = tf.layers.batch_normalization(x, scale=False, training=training)
     x = tf.nn.relu(x)
     for n in conv_filters[1:]:
         x = tf.layers.conv2d(
-            x,
-            filters=n,
-            kernel_size=(3, 3),
-            padding='SAME',
-            activation=None,
-            kernel_initializer=conv_initializer)
-        x = tf.layers.batch_normalization(x, scale=False, training=training)
+            x, filters=n, kernel_size=(3, 3), padding='SAME', activation=None)
+        # x = tf.layers.batch_normalization(x, scale=False, training=training)
         x = tf.nn.relu(x)
     return x
 
@@ -90,12 +83,13 @@ def model_fn(features, labels, mode, params, config):
         kernel_size=(1, 1),
         padding='SAME',
         activation=None)
-    logits_head1 = tf.layers.batch_normalization(
-        logits_head1, scale=False, training=training)
+    # logits_head1 = tf.layers.batch_normalization(
+    #     logits_head1, scale=False, training=training)
     logits_head1 = tf.nn.relu(logits_head1)
     logits_head1 = tf.layers.flatten(logits_head1)
     logits_head1 = tf.layers.dense(logits_head1, 225, activation=None)
-
+    pred = tf.argmax(logits_head1, axis=1)
+    tf.summary.histogram('predict', pred)
     # value head
     logits_head2 = tf.layers.conv2d(
         last_hidden_layer,
@@ -114,14 +108,14 @@ def model_fn(features, labels, mode, params, config):
     head1 = tf.contrib.estimator.multi_class_head(n_classes=225, name="policy")
     head2 = tf.contrib.estimator.regression_head(name="value")
     head = tf.contrib.estimator.multi_head(
-        [head1, head2], head_weights=[1.0, 0])
+        [head1, head2], head_weights=[1.0, 1.0])
 
     def _train_op_fn(loss):
         loss += 0.0  # add regularization
         optimizer = tf.train.AdamOptimizer(params['learning_rate'])
         # optimizer = tf.train.ProximalAdagradOptimizer(
         #     learning_rate=params['learning_rate'],
-        #     l2_regularization_strength=0.0)
+        #     l2_regularization_strength=0.2)
         return optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
     return head.create_estimator_spec(

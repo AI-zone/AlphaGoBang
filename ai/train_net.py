@@ -20,6 +20,7 @@ from env.gobang import show_np, axis, int2array
 
 def get_data(data_file_name):
     f = open(data_file_name).readlines()
+    duplicate = {}
     features = []
     labels = []
     values = []
@@ -33,6 +34,10 @@ def get_data(data_file_name):
             continue
         if abs(line[-1]) == 2:
             line[-1] = line[-1] / 2
+        if (line[0], line[1]) in duplicate:
+            # many state duplicated
+            continue
+        duplicate[(line[0], line[1])] = 0
         example = int2array(line[0:2])
         features.append(example)
         labels.append(line[2])
@@ -86,7 +91,7 @@ def my_numpy_input_fn(x,
 def load_data():
     data_file_name = '/data/gobang/warmup'
     features, labels, values = get_data(data_file_name)
-    train_size = int(len(features) * 0.8)
+    train_size = int(len(features) * 0.7)
     afeatures = np.array(features[:train_size])
     alabels1 = np.array(labels[:train_size])
     alabels2 = np.array(values[:train_size])
@@ -115,7 +120,7 @@ if __name__ == "__main__":
 
     train_input_fn = my_numpy_input_fn(train_x, train_y)
     test_input_fn = my_numpy_input_fn(test_x, test_y)
-    params = dict(conv_filters=[24] * 4, learning_rate=0.0001)
+    params = dict(conv_filters=[24] * 4, learning_rate=0.01)
     classifier = tf.estimator.Estimator(
         model_fn=model_fn,
         params=params,
@@ -134,10 +139,10 @@ if __name__ == "__main__":
                 servable_model_dir, export_input_fn)
         except KeyboardInterrupt:
             print("USER interrupt")
-            features = {'x': tf.placeholder(tf.float32, [None, 15, 15, 2])}
-            export_input_fn = tf.estimator.export.build_raw_serving_input_receiver_fn(
-                features)
-            servable_model_dir = "/data/gobang/init"
-            servable_model_path = classifier.export_savedmodel(
-                servable_model_dir, export_input_fn)
+            # features = {'x': tf.placeholder(tf.float32, [None, 15, 15, 2])}
+            # export_input_fn = tf.estimator.export.build_raw_serving_input_receiver_fn(
+            #     features)
+            # servable_model_dir = "/data/gobang/init"
+            # servable_model_path = classifier.export_savedmodel(
+            #     servable_model_dir, export_input_fn)
             break
