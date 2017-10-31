@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
     train_input_fn = my_numpy_input_fn(train_x, train_y)
     test_input_fn = my_numpy_input_fn(test_x, test_y)
-    params = dict(conv_filters=[24] * 4, learning_rate=0.005)
+    params = dict(conv_filters=[24] * 4, learning_rate=0.0001)
     classifier = tf.estimator.Estimator(
         model_fn=model_fn,
         params=params,

@@ -83,7 +83,6 @@ def model_fn(features, labels, mode, params, config):
     training = mode == tf.estimator.ModeKeys.TRAIN
     last_hidden_layer = _bnconv_logits(
         features['x'], params['conv_filters'], training=training)
-    print(last_hidden_layer.get_shape())
     # policy head
     logits_head1 = tf.layers.conv2d(
         last_hidden_layer,
@@ -112,17 +111,17 @@ def model_fn(features, labels, mode, params, config):
     logits_head2 = tf.layers.dense(logits_head2, 1, activation=tf.tanh)
 
     logits = {"policy": logits_head1, "value": logits_head2}
-    # logits = logits_head2
-    print(logits_head1.get_shape(), logits_head2.get_shape())
     head1 = tf.contrib.estimator.multi_class_head(n_classes=225, name="policy")
     head2 = tf.contrib.estimator.regression_head(name="value")
-    head = tf.contrib.estimator.multi_head([head1, head2])
+    head = tf.contrib.estimator.multi_head(
+        [head1, head2], head_weights=[1.0, 0])
 
     def _train_op_fn(loss):
-        # optimizer = tf.train.AdamOptimizer(params['learning_rate'])
-        optimizer = tf.train.ProximalAdagradOptimizer(
-            learning_rate=params['learning_rate'],
-            l2_regularization_strength=0.05)
+        loss += 0.0  # add regularization
+        optimizer = tf.train.AdamOptimizer(params['learning_rate'])
+        # optimizer = tf.train.ProximalAdagradOptimizer(
+        #     learning_rate=params['learning_rate'],
+        #     l2_regularization_strength=0.0)
         return optimizer.minimize(loss, global_step=tf.train.get_global_step())
 
     return head.create_estimator_spec(

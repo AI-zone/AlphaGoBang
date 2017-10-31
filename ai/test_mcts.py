@@ -4,7 +4,8 @@ from env.gobang import Game, axis, toind
 import zmq
 import msgpack
 import msgpack_numpy
-from blist import blist
+from env.gobang import show
+
 msgpack_numpy.patch()
 
 
@@ -32,15 +33,10 @@ class Tester(object):
 
 if __name__ == "__main__":
     tester = Tester()
-    g = Game()
-    g.add(7, 7)
-    g.add(7, 9)
-    g.add(11, 11)
-    g.add(7, 8)
-    g.add(9, 9)
-    g.add(8, 9)
-    g.add(6, 9)
-    g.add(7, 6)
-    for i in range(2):
-        tester.send_batch([(g.black, g.white)] * 2)
-    #content = tester.recv()
+    f = open('/data/gobang/warmup', 'r').readlines()
+    import random
+    for i in range(1):
+        line = random.choice(f).split(',')
+        show(int(line[0]), int(line[1]))
+        print(line[2])
+        tester.send_batch([(line[0], line[1])])

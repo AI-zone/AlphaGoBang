@@ -70,8 +70,8 @@ class Runner():
             features, identity = self._continuous_recv()
             p = self.policy_fn({'x': features})
             v = self.value_fn({'x': features})
-            print(p)
-            print(v)
+            print("This is p", p)
+            print("This is v", v)
             # self._reply((p, v), identity)
 
 

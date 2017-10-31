@@ -162,7 +162,9 @@ def show(black, white):
     """TODO: 根据self.logs改成可视化棋谱，类似AlphaGo围棋SGF图片"""
     for x in X:
         for y in Y:
-            if (black & gobit[(x, y)]):
+            if (x == 7) and (y == 7):
+                print("\033[%d;%d;%dm  \033[0m" % (0, 33, 43), end='')
+            elif (black & gobit[(x, y)]):
                 print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
             elif (white & gobit[(x, y)]):
                 print("\033[%d;%d;%dm  \033[0m" % (0, 32, 42), end='')
