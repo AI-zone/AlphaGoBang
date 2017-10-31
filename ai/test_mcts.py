@@ -1,24 +1,25 @@
 from ai.mcts_policy import Tree, plot_pi, legal, move_state
 from env.gobang import Game, axis, toind
-
+import sys
 import zmq
 import msgpack
 import msgpack_numpy
 from env.gobang import show
-
+from tqdm import tqdm
 msgpack_numpy.patch()
 
 
 class Tester(object):
-    def __init__(self):
-        self.identity = '0-0'
+    def __init__(self, sid, pid):
+        self.identity = b'%d-%d' % (sid, pid)
+        self.sid = sid
         self._buildsockets()
 
     def _buildsockets(self):
         context = zmq.Context()
         self.socket = context.socket(zmq.DEALER)
-        self.socket.setsockopt_string(zmq.IDENTITY, self.identity)
-        self.socket.connect('ipc://./tmp/oracle_recv.ipc')
+        self.socket.setsockopt(zmq.IDENTITY, self.identity)
+        self.socket.connect('ipc://./tmp/oracle_recv%d.ipc' % self.sid)
         print("FINISH build socket")
 
     def send_batch(self, batch_data):
@@ -32,11 +33,13 @@ class Tester(object):
 
 
 if __name__ == "__main__":
-    tester = Tester()
+    sid = int(sys.argv[1])
+    pid = int(sys.argv[2])
+    tester = Tester(sid, pid)
     f = open('/data/gobang/warmup', 'r').readlines()
     import random
-    for i in range(5):
-        line = random.choice(f).split(',')
-        show(int(line[0]), int(line[1]))
-        print(axis(int(line[2])), line[2])
-        tester.send_batch([(line[0], line[1])])
+    for i in tqdm(range(3000)):
+        lines = random.sample(f, 256)
+        tester.send_batch([(line.split(',')[0], line.split(',')[1])
+                           for line in lines if len(line) > 3])
+        content = tester.recv()

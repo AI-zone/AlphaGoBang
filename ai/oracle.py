@@ -37,20 +37,20 @@ def call_saved_model():
 
 
 class Runner():
-    def __init__(self, policy_fn, value_fn):
+    def __init__(self, policy_fn, value_fn, sid):
         self.cache = {}
         self.policy_fn = policy_fn
         self.value_fn = value_fn
+        self.sid = sid
 
     def _buildsockets(self):
         context = zmq.Context()
         self.socket = context.socket(zmq.ROUTER)
-        self.socket.bind('ipc://./tmp/oracle_recv.ipc')
+        self.socket.bind('ipc://./tmp/oracle_recv%d.ipc' % sid)
 
     def _continuous_recv(self):
 
         _addr, content = self.socket.recv_multipart()
-        print(content)
         batch, identity = msgpack.loads(content)
         batch = [(int(i[0]), int(i[1])) for i in batch]
         features = []
@@ -59,10 +59,8 @@ class Runner():
             features.append(example)
         return features, identity
 
-    def _reply(self, oracles, identities):
-        for ind, identity in enumerate(identities):
-            print(identity, oracles[ind])
-            self.socket.send_multipart([identity, msgpack.dumps(oracles[ind])])
+    def _reply(self, oracles, identity):
+        self.socket.send_multipart([identity, msgpack.dumps(oracles)])
 
     def run(self):
         self._buildsockets()
@@ -71,17 +69,16 @@ class Runner():
             features, identity = self._continuous_recv()
             p = self.policy_fn({'x': features})
             v = self.value_fn({'x': features})
-            print(p['classes'], v)
 
-            # self._reply((p, v), identity)
+            self._reply((p['probabilities'], v), identity)
 
 
 if __name__ == "__main__":
+    sid = int(sys.argv[2])
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.2)
     session_config = tf.ConfigProto(gpu_options=gpu_options)
     sess = tf.Session(config=session_config)
     with sess.as_default():
         policy_fn, value_fn = call_saved_model()
-        runner = Runner(policy_fn, value_fn)
-
+        runner = Runner(policy_fn, value_fn, sid)
         runner.run()
