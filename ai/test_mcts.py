@@ -15,7 +15,8 @@ class Tester(object):
 
     def _buildsockets(self):
         context = zmq.Context()
-        self.socket = context.socket(zmq.PUSH)
+        self.socket = context.socket(zmq.DEALER)
+        self.socket.setsockopt_string(zmq.IDENTITY, self.identity)
         self.socket.connect('ipc://./tmp/oracle_recv.ipc')
         print("FINISH build socket")
 
@@ -33,7 +34,13 @@ if __name__ == "__main__":
     tester = Tester()
     g = Game()
     g.add(7, 7)
+    g.add(7, 9)
+    g.add(11, 11)
     g.add(7, 8)
+    g.add(9, 9)
+    g.add(8, 9)
+    g.add(6, 9)
+    g.add(7, 6)
     for i in range(2):
-        tester.send_batch([(g.black, g.white)] * 10)
+        tester.send_batch([(g.black, g.white)] * 2)
     #content = tester.recv()

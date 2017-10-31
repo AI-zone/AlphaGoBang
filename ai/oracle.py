@@ -20,15 +20,18 @@ from tensorflow.contrib import predictor
 import zmq
 import msgpack
 import msgpack_numpy
-from gobang import int2array
+from env.gobang import int2array
 msgpack_numpy.patch()
 
 
 def call_saved_model():
+    model_list = os.listdir('./models/')
+    model_list.sort()
+    best_model = './models/' + model_list[-1]
     policy_fn = predictor.from_saved_model(
-        '/data/gobang/init/1509359549', signature_def_key='predict/policy')
+        best_model, signature_def_key='predict/policy')
     value_fn = predictor.from_saved_model(
-        '/data/gobang/init/1509359549', signature_def_key='predict/value')
+        best_model, signature_def_key='predict/value')
     return policy_fn, value_fn
 
 
@@ -40,13 +43,13 @@ class Runner():
 
     def _buildsockets(self):
         context = zmq.Context()
-        self.socket = context.socket(zmq.PULL)
+        self.socket = context.socket(zmq.ROUTER)
         self.socket.bind('ipc://./tmp/oracle_recv.ipc')
 
     def _continuous_recv(self):
 
-        content = self.socket.recv()
-
+        _addr, content = self.socket.recv_multipart()
+        print(content)
         batch, identity = msgpack.loads(content)
         batch = [(int(i[0]), int(i[1])) for i in batch]
         features = []
@@ -69,11 +72,11 @@ class Runner():
             v = self.value_fn({'x': features})
             print(p)
             print(v)
-            self._reply((p, v), identity)
+            # self._reply((p, v), identity)
 
 
 if __name__ == "__main__":
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.5)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.2)
     session_config = tf.ConfigProto(gpu_options=gpu_options)
     sess = tf.Session(config=session_config)
     with sess.as_default():
