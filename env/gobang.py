@@ -45,18 +45,48 @@ def toind(x, y):
     return x + 15 * y
 
 
-def int2array(line):
+def int2array(line, augment=True):
     """
-    line: [binary1, binary2]
-    return: np.array((15, 15, 2))
+    line: [mine, yours, color, action, value]
+    return: example, policy, value lis
+
     """
-    example = np.zeros((15, 15, 2), dtype=np.float32)
+    example = np.zeros((15, 15, 3), dtype=np.float32)
     for channel in range(2):
         intstr = str(bin(int(line[channel]))[2:].zfill(225))
         tmp = np.fromstring(intstr[::-1], np.int8) - 48
         tmp = tmp.reshape((15, 15))
         example[:, :, channel] = tmp.T
-    return example
+    x, y = axis(int(line[3]))
+    example[x, y, 2] = 1.0
+
+    examples = []
+    policies = []
+    values = []
+
+    for k in range(4):
+        tmp = np.zeros((15, 15, 3), dtype=np.float32)
+        tmp[:] = np.rot90(example, k, (0, 1))
+        rx, ry = axis(np.argmax(tmp[:, :, 2].T))
+        policy = toind(rx, ry)
+        tmp[:, :, 2] = int(line[2])
+        examples.append(tmp)
+        policies.append(policy)
+        values.append(float(line[4]))
+        if not augment:
+            return examples, policies, values
+
+    rev_example = example[::-1, :, :]
+    for k in range(4):
+        tmp = np.zeros((15, 15, 3), dtype=np.float32)
+        tmp[:] = np.rot90(rev_example, k, (0, 1))
+        rx, ry = axis(np.argmax(tmp[:, :, 2].T))
+        policy = toind(rx, ry)
+        tmp[:, :, 2] = int(line[2])
+        examples.append(tmp)
+        policies.append(policy)
+        values.append(float(line[4]))
+    return examples, policies, values
 
 
 # @profile
@@ -151,7 +181,7 @@ def show(black, white):
     for x in X:
         for y in Y:
             if (x == 7) and (y == 7):
-                print("\033[%d;%d;%dm  \033[0m" % (0, 33, 43), end='')
+                print("\033[%d;%d;%dm**\033[0m" % (0, 33, 41), end='')
             elif (black & gobit[(x, y)]):
                 print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
             elif (white & gobit[(x, y)]):
@@ -167,7 +197,7 @@ def show_np(mat):
     for x in range(15):
         for y in range(15):
             if (x == 7) and (y == 7):
-                print("\033[%d;%d;%dm  \033[0m" % (0, 33, 43), end='')
+                print("\033[%d;%d;%dm**\033[0m" % (0, 33, 41), end='')
             elif mat[x, y, 0] > 0:
                 print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
             elif mat[x, y, 1] > 0:

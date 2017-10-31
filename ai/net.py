@@ -97,8 +97,8 @@ def model_fn(features, labels, mode, params, config):
         kernel_size=(1, 1),
         padding='SAME',
         activation=None)
-    logits_head2 = tf.layers.batch_normalization(
-        logits_head2, scale=False, training=training)
+    # logits_head2 = tf.layers.batch_normalization(
+    #     logits_head2, scale=False, training=training)
     logits_head2 = tf.nn.relu(logits_head2)
     logits_head2 = tf.layers.dense(logits_head2, 16, activation=tf.nn.relu)
     logits_head2 = tf.layers.flatten(logits_head2)

@@ -21,28 +21,26 @@ from env.gobang import show_np, axis, int2array
 def get_data(data_file_name):
     f = open(data_file_name).readlines()
     duplicate = {}
-    features = []
-    labels = []
+    examples = []
+    policies = []
     values = []
     for line in f:
         if len(line) < 3:
             continue
-        line = [int(i) for i in line.strip('\n').split(',')]
-        if len(line) != 4:
+        line = line.strip('\n').split(',')
+        if len(line) != 5:
             continue
-        if abs(line[-1]) > 2:
+        if abs(float(line[-1])) > 2:
             continue
-        if abs(line[-1]) == 2:
-            line[-1] = line[-1] / 2
         if (line[0], line[1], line[3]) in duplicate:
             # many state duplicated
             continue
         duplicate[(line[0], line[1], line[3])] = 0
-        example = int2array(line[0:2])
-        features.append(example)
-        labels.append(line[2])
-        values.append(line[3])
-    return features, labels, values
+        example, policy, value = int2array(line)
+        examples += example
+        policies += policy
+        values += value
+    return examples, policies, values
 
 
 def my_numpy_input_fn(x,
@@ -89,7 +87,7 @@ def my_numpy_input_fn(x,
 
 
 def load_data():
-    data_file_name = '/data/gobang/warmup'
+    data_file_name = '/data/gobang/selfplay/1509455087'
     features, labels, values = get_data(data_file_name)
     train_size = int(len(features) * 0.7)
     afeatures = np.array(features[:train_size])
@@ -120,7 +118,7 @@ if __name__ == "__main__":
 
     train_input_fn = my_numpy_input_fn(train_x, train_y)
     test_input_fn = my_numpy_input_fn(test_x, test_y)
-    params = dict(conv_filters=[24] * 4, learning_rate=0.01)
+    params = dict(conv_filters=[32] * 12, learning_rate=0.001)
     classifier = tf.estimator.Estimator(
         model_fn=model_fn,
         params=params,
@@ -131,7 +129,7 @@ if __name__ == "__main__":
         try:
             classifier.train(input_fn=train_input_fn)
             classifier.evaluate(input_fn=test_input_fn)
-            features = {'x': tf.placeholder(tf.float32, [None, 15, 15, 2])}
+            features = {'x': tf.placeholder(tf.float32, [None, 15, 15, 3])}
             export_input_fn = tf.estimator.export.build_raw_serving_input_receiver_fn(
                 features)
             servable_model_dir = "/data/gobang/init"
@@ -139,7 +137,7 @@ if __name__ == "__main__":
                 servable_model_dir, export_input_fn)
         except KeyboardInterrupt:
             print("USER interrupt")
-            # features = {'x': tf.placeholder(tf.float32, [None, 15, 15, 2])}
+            # features = {'x': tf.placeholder(tf.float32, [None, 15, 15, 3])}
             # export_input_fn = tf.estimator.export.build_raw_serving_input_receiver_fn(
             #     features)
             # servable_model_dir = "/data/gobang/init"
