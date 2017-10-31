@@ -6,7 +6,9 @@
 # @Last modified time: 21_Oct_2017
 
 import multiprocessing
+import os
 import time
+import math
 import zmq
 import msgpack
 import msgpack_numpy
@@ -15,10 +17,12 @@ import math
 import config
 
 from ai.mcts_policy import Tree
-from env.gobang import axis, legal, show, toind
+from env.gobang import axis, legal, show_pi, toind, posswap
 msgpack_numpy.patch()
 
-warmup_file = open('/data/gobang/warmup', 'a')
+selfplayfiles = os.listdir('/data/gobang/selfplay/')
+selfplayfiles.sort()
+selfplaylog = open('/data/gobang/selfplay/' + selfplayfiles[-1], 'a')
 
 
 class Player(multiprocessing.Process):
@@ -30,9 +34,8 @@ class Player(multiprocessing.Process):
     def __init__(self, sid, player_id):
         super().__init__()
         self.sid = sid
-        self.tree = Tree()
-        self.side = None  # black or white, depends on server
         self.player_id = player_id
+        self.tree = Tree(self.sid, b'%d-%d' % (self.sid, self.player_id))
         self.memory = {}  # self.memory[t] = [(mine, yours), action, z]
         self.round_counter = 0
 
@@ -70,7 +73,7 @@ class Player(multiprocessing.Process):
         if self.sid == 0:
             # only print server 0
             print(self.round_counter, len(self.tree.nodes))
-            show(board[1], board[2])
+            show_pi(board[1], board[2], pi)
         if config.TEMPERATURE == 0:
             ind = np.argmax(pi)
             return axis(ind)
@@ -89,28 +92,51 @@ class Player(multiprocessing.Process):
         if end[0] == 'B':
             for t in self.memory:
                 if t % 2 == 0:
-                    self.memory[t][3] = 1
+                    self.memory[t][4] = 1
                 else:
-                    self.memory[t][3] = -1
+                    self.memory[t][4] = -1
         elif end[0] == 'W':
             for t in self.memory:
                 if t % 2 == 0:
-                    self.memory[t][3] = -1
+                    self.memory[t][4] = -1
                 else:
-                    self.memory[t][3] = 1
+                    self.memory[t][4] = 1
         elif end[0] == 'J':
-            for t in self.memory:
-                if t % 2 == 0:
-                    self.memory[t][3] = -2
-                else:
-                    self.memory[t][3] = 2
+            self.memory = {}
+            return
+            # for t in self.memory:
+            #     if t % 2 == 0:
+            #         self.memory[t][4] = -1
+            #     else:
+            #         self.memory[t][4] = 1
+        elif end[0] == 'E':
+            self.memory = {}
+            return
+        game_len = len(self.memory)
         for t in self.memory:
-            serielized = [str(i) for i in self.memory[t]]
-            print(','.join(serielized), file=warmup_file)
+            if t % 2 == 0:
+                serielized = [
+                    str(self.memory[t][0]),
+                    str(self.memory[t][1]),
+                    str(self.memory[t][2]),
+                    str(self.memory[t][3]),
+                    str(self.memory[t][4] * math.pow(config.VALUE_DECAY,
+                                                     game_len - t)),
+                ]
+            else:
+                serielized = [
+                    str(self.memory[t][1]),
+                    str(self.memory[t][0]),
+                    str(self.memory[t][2]),
+                    str(self.memory[t][3]),
+                    str(self.memory[t][4] * math.pow(config.VALUE_DECAY,
+                                                     game_len - t)),
+                ]
+            print(','.join(serielized), file=selfplaylog)
         self.memory = {}
         self.round_counter += 1
         if self.round_counter % 100 == 0:
-            self.tree = Tree()
+            self.tree = Tree(self.sid, b'%d-%d' % (self.sid, self.player_id))
 
     def _run_a_round(self):
         while True:
@@ -120,12 +146,11 @@ class Player(multiprocessing.Process):
                 return
             pi = self._get_pi(board)
             action = self._get_action(board, pi)
-            if board[0] % 2 == 0:
-                mine, yours = board[1], board[2]
-            else:
-                mine, yours = board[2], board[1]
-
-            self.memory[board[0]] = [mine, yours, toind(*action), 0]
+            color = board[0] % 2
+            self.memory[board[0]] = [
+                board[1], board[2], color,
+                toind(*action), 0
+            ]
             self._send_server(action)
 
     def run(self):

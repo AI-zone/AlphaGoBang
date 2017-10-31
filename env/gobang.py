@@ -66,6 +66,13 @@ def valid(black, white, x, y):
     return (not black & gobit[(x, y)]) and (not white & gobit[(x, y)])
 
 
+def posswap(t, black, white):
+    if t % 2 == 0:
+        return black, white
+    else:
+        return white, black
+
+
 # @profile
 def legal(black, white, t):
     """返回所有合法落子ind
@@ -84,44 +91,24 @@ def legal(black, white, t):
             for i in [-2, -1, 0, 1, 2] for j in [-2, -1, 0, 1, 2]
             if not gobit[(7 + i, 7 + j)] & stones
         ]
-    # elif t <= 10:
-    #     legal_list = [
-    #         toind(7 + i, 7 + j) for i in range(-4, 5) for j in range(-4, 5)
-    #         if not gobit[(7 + i, 7 + j)] & stones
-    #     ]
+
     else:
         legal_list = [
-            ind for ind in range(config.SIZE) if not gobit[axis(ind)] & stones
+            ind for ind in range(config.SIZE)
+            if not (gobit[axis(ind)] & stones)
         ]
-    # empty = []
-    # for ind in legal_list:
-    #     if valid(black, white, *axis(ind)):
-    #         empty.append(ind)
     return legal_list
 
 
-# @profile
-def check_backup(board, x, y):
-    """检查刚刚落子的那个人是否赢了"""
-    row = board & mask_row[x]
-    col = board & mask_col[y]
-    zheng = board & mask_zheng[x + y]
-    fan = board & mask_fan[14 - x + y]
-    if row & (row << 15) & (row << 30) & (row << 45) & (row << 60) > 0:
-        return True
-    if col & (col << 1) & (col << 2) & (col << 3) & (col << 4) > 0:
-        return True
-    if zheng & (zheng << 14) & (zheng << 28) & (zheng << 42) & (
-            zheng << 56) > 0:
-        return True
-    if fan & (fan << 16) & (fan << 32) & (fan << 48) & (fan << 64) > 0:
-        return True
-
-
-def check(mine, yours, x, y):
-    """检查刚刚落子的那个人(棋盘mine)是否赢+1，是否33，44禁手-1，其他0.
-    !!!check里面不区分黑白
+def check(black, white, x, y, t):
+    """check terminal.
+    Args:
+        black:  after action state
+        white:  after action state
+        x, y:   action axis
+        t:      action time
     """
+    mine, yours = posswap(t, black, white)
     row = mine & mask_row[x]
     col = mine & mask_col[y]
     zheng = mine & mask_zheng[x + y]
@@ -153,13 +140,14 @@ def check(mine, yours, x, y):
                 if valid_e and valid_n:
                     num4 += 1
                     break
-    if (num3 > 1) or (num4 > 1):
+    if ((num3 > 1) or (num4 > 1)) and (t % 2 == 0):
         return -1
     return 0
 
 
 def show(black, white):
-    """TODO: 根据self.logs改成可视化棋谱，类似AlphaGo围棋SGF图片"""
+    """ plot board from binary int format.
+    """
     for x in X:
         for y in Y:
             if (x == 7) and (y == 7):
@@ -174,6 +162,8 @@ def show(black, white):
 
 
 def show_np(mat):
+    """ plot board from np.array format.
+    """
     for x in range(15):
         for y in range(15):
             if (x == 7) and (y == 7):
@@ -182,6 +172,43 @@ def show_np(mat):
                 print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
             elif mat[x, y, 1] > 0:
                 print("\033[%d;%d;%dm  \033[0m" % (0, 32, 42), end='')
+            else:
+                print("  ", end='')
+        print("")
+
+
+def show_pi(black, white, pi):
+
+    pi = pi / sum(pi) * 100
+    pi = pi.reshape((15, 15)).T
+    max_ind = axis(np.argmax(pi))
+    sx, sy = max_ind[1], max_ind[0]
+    num_stone = 0
+    for x in range(15):
+        for y in range(15):
+            if (black & gobit[(x, y)]) or (white & gobit[(x, y)]):
+                num_stone += 1
+    print(black, white, num_stone)
+    if num_stone % 2 == 0:
+        color = 41
+    else:
+        color = 42
+    for x in range(15):
+        for y in range(15):
+            if (x == 7) and (y == 7):
+                print("\033[%d;%d;%dm**\033[0m" % (0, 33, 41), end='')
+            elif (black & gobit[(x, y)]):
+                print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
+            elif (white & gobit[(x, y)]):
+                print("\033[%d;%d;%dm  \033[0m" % (0, 32, 42), end='')
+            elif (x == sx) and (y == sy):
+                print(
+                    "\033[%d;%d;%dm%2d\033[0m" % (0, 37, color, int(pi[x, y])),
+                    end='')
+            elif int(pi[x, y]) >= 1:
+                print("%2d" % int(pi[x, y]), end='')
+            elif pi[x, y] > 0:
+                print("--", end='')
             else:
                 print("  ", end='')
         print("")
@@ -206,41 +233,39 @@ class Game():
     提供一个show() 函数，打印当前状态  x为黑， o为白
     """
 
-    def __init__(self, t=0, black=0, white=0):
+    def __init__(self, t=1, black=gobit[(7, 7)], white=0):
         self.black = black
         self.white = white
         self.t = t
-        self.logs = []
+        self.logs = [(7, 7)]
 
-    def newround(self, t=0, black=0, white=0):
+    def newround(self, t=1, black=gobit[(7, 7)], white=0):
         self.black = black
         self.white = white
         self.t = t
-        self.logs = []
+        self.logs = [(7, 7)]
 
     def add(self, x, y):
         """落子"""
         if not valid(self.white, self.black, x, y):
             raise RuntimeError('duplicated move')
         self.logs.append((x, y))
+
         if self.t % 2 == 0:
             self.black += gobit[(x, y)]
-            self.t += 1
-            point = check(self.black, self.white, x, y)
-            if point == 1:
-                return "B"
-            elif point == -1:
-                return "J"
-            else:
-                return "P"
         else:
             self.white += gobit[(x, y)]
-            self.t += 1
-            point = check(self.white, self.black, x, y)
-            if point == 1:
-                return "W"
-            else:
-                return "P"
+
+        point = check(self.black, self.white, x, y, self.t)
+        self.t += 1
+        if point == 1:
+            if self.t % 2 == 1:
+                return "B"
+            return "W"
+        elif point == -1:
+            return "J"
+        else:
+            return "P"
 
     def show(self):
         """TODO: 根据self.logs在终端可视化棋谱"""
@@ -285,14 +310,9 @@ class Game():
 
 if __name__ == "__main__":
 
-    g = Game()
-    blacks = [(7, 7), (8, 8), (10, 8), (11, 7), (9, 9)]
-    whites = [(0, i) for i in range(len(blacks) - 1)]
-    for i in range(len(whites)):
-        g.add(*blacks[i])
-        g.add(*whites[i])
-    res = g.add(*blacks[-1])
-    g.show()
-    x, y = blacks[-1]
-    mine = g.black
-    yours = g.white
+    g = Game(
+        black=2923047876832840323968461801439717328221198352384,
+        white=2923047876832840324602287101553832028969549955072,
+        t=9)
+    g.add(4, 8)
+    show(g.black, g.white)

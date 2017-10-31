@@ -8,6 +8,7 @@
 import threading
 import numpy as np
 import zmq
+import time
 import msgpack
 import msgpack_numpy
 from env.gobang import Game
@@ -70,8 +71,8 @@ class Server(threading.Thread):
                 return
             elif result == 'F':
                 print('##########')
-        # GAMELENGTH 步后无胜负，算白赢
-        self._send('W')
+        # special tag
+        self._send('E')
 
     def run(self):
         np.random.seed()
@@ -83,6 +84,8 @@ class Server(threading.Thread):
 
 
 if __name__ == "__main__":
+    f = open('/data/gobang/selfplay/' + str(int(time.time())), 'a')
+    f.close()
     servers = [Server(sid) for sid in range(config.NUMPARALELL)]
     for s in servers:
         s.start()

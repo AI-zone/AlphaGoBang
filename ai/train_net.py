@@ -34,10 +34,10 @@ def get_data(data_file_name):
             continue
         if abs(line[-1]) == 2:
             line[-1] = line[-1] / 2
-        if (line[0], line[1]) in duplicate:
+        if (line[0], line[1], line[3]) in duplicate:
             # many state duplicated
             continue
-        duplicate[(line[0], line[1])] = 0
+        duplicate[(line[0], line[1], line[3])] = 0
         example = int2array(line[0:2])
         features.append(example)
         labels.append(line[2])

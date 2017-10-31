@@ -41,5 +41,5 @@ if __name__ == "__main__":
     for i in tqdm(range(3000)):
         lines = random.sample(f, 256)
         tester.send_batch([(line.split(',')[0], line.split(',')[1])
-                           for line in lines if len(line) > 3])
+                           for line in lines if len(line) > 10])
         content = tester.recv()
