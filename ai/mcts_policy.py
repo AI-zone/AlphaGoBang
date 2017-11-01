@@ -1,22 +1,13 @@
-"""MCTD"""
+"""MCTS"""
 # pylint: disable-msg=C0103
 # pylint: disable-msg=E1101
 # pylint: disable-msg=E0632
-import sys
-import numpy as np
 import math
-import random
-import config
-import zmq
-import msgpack
-import msgpack_numpy
-from env.gobang import valid, check, axis, gobit, legal, show, posswap
+import queue
+
 import numpy as np
-msgpack_numpy.patch()
-
-import threading
-
-lock = threading.Lock()
+import config
+from env.gobang import check, axis, gobit, legal
 
 # pylint: disable-msg=C0103
 
@@ -39,7 +30,7 @@ def move_state(t, black, white, a, check_win=True):
     return (black, white), point
 
 
-def make_mask(action):
+def _make_mask(action):
     if config.DISTANCE == 0:
         return 2**225 - 1
     x, y = axis(action)
@@ -52,43 +43,32 @@ def make_mask(action):
 
 class Node():
     """state node."""
-    __slots__ = ['t', 'N', 'W', 'mine', 'yours', 'p', 'v', 'mask']
+    __slots__ = ['t', 'N', 'W', 'p', 'v', 'mask', 'updated']
 
-    def __init__(self, t, black, white, mask):
+    def __init__(self, t, mask):
         """
         """
         self.t = t
         self.N = 0
         self.W = 0
-        self._get_p_v(t, *posswap(t, black, white))
         self.mask = mask
-
-    def _get_p_v(self, t, mine, yours):
-        p, v = np.random.random(225).astype(np.float16), np.random.random()
-        self.p = p
-        if t % 2 == 0:
-            self.v = v
-        else:
-            self.v = -v
+        self.p = np.random.random(225).astype(np.float16)
+        self.v = 0
+        self.updated = False
 
 
 class Tree():
     """MCTS."""
-    __slots__ = ['nodes', 'mask', 'socket', 'player_id', 'model_name', 'lock']
+    __slots__ = [
+        'nodes', 'mask', 'player_id', 'model_name', 'lock', 'to_evaluate'
+    ]
 
     def __init__(self, player_id, lock):
         self.nodes = {}
-        self.socket = None
         self.player_id = player_id
         self.model_name = player_id.split('_')[1]
-        self._buildsockets()
         self.lock = lock
-
-    def _buildsockets(self):
-        context = zmq.Context()
-        self.socket = context.socket(zmq.DEALER)
-        self.socket.setsockopt_string(zmq.IDENTITY, self.player_id)
-        self.socket.connect('ipc://./tmp/oracle_%s' % self.model_name)
+        self.to_evaluate = queue.Queue(maxsize=100000)
 
     def QnU(self, t, s_t, a, begin):
         """s_t: (black, white), a: action in [0, 224]. begin: global_step"""
@@ -130,8 +110,7 @@ class Tree():
                     return -1
 
         if simu_step >= begin + config.L:
-            # return self.nodes[s_t].v
-            return 0
+            return self.nodes[s_t].v
         # 往下走
         empty = legal(s_t[0], s_t[1], simu_step)
         empty = [a for a in empty if gobit[axis(a)] & cur.mask]
@@ -141,8 +120,9 @@ class Tree():
         if s_tplus1 not in self.nodes:
             #  create Node
             with self.lock:
-                self.nodes[s_tplus1] = Node(simu_step + 1, *s_tplus1,
-                                            cur.mask | make_mask(action))
+                self.nodes[s_tplus1] = Node(simu_step + 1,
+                                            cur.mask | _make_mask(action))
+                self.to_evaluate.put((simu_step + 1, *s_tplus1))
         v = self._simulate(begin, simu_step + 1, s_tplus1, isleaf)
         with self.lock:
             cur.W += v
@@ -157,9 +137,10 @@ class Tree():
                 new_mask = gobit[(7, 7)]
                 for ind in range(225):
                     if gobit[axis(ind)] & ((s_t[0] | s_t[1])):
-                        new_mask = new_mask | make_mask(ind)
+                        new_mask = new_mask | _make_mask(ind)
 
-                self.nodes[s_t] = Node(t, *s_t, new_mask)
+                self.nodes[s_t] = Node(t, new_mask)
+                self.to_evaluate.put((t, black, white))
 
         while self.nodes[s_t].N < config.NUM_SIMULATIONS:
             self._simulate(t, t, s_t)

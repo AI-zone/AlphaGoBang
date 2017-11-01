@@ -44,29 +44,31 @@ class Runner():
         context = zmq.Context()
         self.socket = context.socket(zmq.ROUTER)
         self.socket.bind('ipc://./tmp/oracle_%s' % self.model_name)
+        print('receiving ', self.model_name)
 
     def _continuous_recv(self):
-
+        """[mine, yours, color]"""
         _addr, content = self.socket.recv_multipart()
         batch, identity = msgpack.loads(content)
-        batch = [(int(i[0]), int(i[1])) for i in batch]
+        batch = [(int(i[0]), int(i[1]), int(i[2])) for i in batch]
         features = []
         for each in batch:
-            example = int2array(each)
+            example = int2array(each, False)
             features.append(example)
         return features, identity
 
     def _reply(self, oracles, identity):
-        self.socket.send_multipart([identity, msgpack.dumps(oracles)])
+        self.socket.send_multipart(
+            [bytes(identity, 'utf-8'),
+             msgpack.dumps(oracles)])
 
     def run(self):
+        """recv from player and sess.run"""
         self._buildsockets()
-
         while True:
             features, identity = self._continuous_recv()
             p = self.policy_fn({'x': features})
             v = self.value_fn({'x': features})
-
             self._reply((p['probabilities'], v), identity)
 
 

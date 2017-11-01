@@ -14,7 +14,7 @@ import numpy as np
 import config
 
 from ai.mcts_policy import Tree
-from env.gobang import axis, legal, show_pi, toind
+from env.gobang import axis, legal, show_pi, toind, posswap
 msgpack_numpy.patch()
 
 
@@ -57,7 +57,7 @@ class Player(multiprocessing.Process):
     def _get_action(self, board, pi, gid):
         """sample according to pi(with config.TENPERATURE)"""
         if gid == 0:
-            print(len(self.tree.nodes))
+            print(len(self.tree.nodes), self.tree.to_evaluate.qsize())
             show_pi(board[1], board[2], pi)
         if config.TEMPERATURE == 0:
             ind = np.argmax(pi)
@@ -142,6 +142,26 @@ class Player(multiprocessing.Process):
             ]
             _send_server(socket, (*action, gid))
 
+    def evaluate_node(self):
+        """update node p, v in tree"""
+        # p, v = np.random.random(225).astype(np.float16), np.random.random()
+        context = zmq.Context()
+        socket = context.socket(zmq.DEALER)
+        socket.setsockopt_string(zmq.IDENTITY, self.player_id)
+        socket.connect('ipc://./tmp/oracle_%s' % self.tree.model_name)
+        print('start to evaluate', self.tree.model_name)
+        while True:
+            # print(self.tree.to_evaluate.qsize())
+            batch = []
+            for _ in range(config.INFERENCE_BATCHSIZE):
+                t, black, white = self.tree.to_evaluate.get()
+                mine, yours = posswap(t, black, white)
+                color = t % 2
+                batch.append((str(mine), str(yours), color))
+
+            socket.send(msgpack.dumps((batch, self.player_id)))
+            result = socket.recv()
+
     def run(self):
         threads = []
         for i in range(config.GAMEPARALELL):
@@ -149,6 +169,9 @@ class Player(multiprocessing.Process):
             t.daemon = True
             threads.append(t)
             t.start()
+        evaluate_thread = threading.Thread(target=self.evaluate_node)
+        threads.append(evaluate_thread)
+        evaluate_thread.start()
         for t in threads:
             t.join()
 

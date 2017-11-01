@@ -49,11 +49,13 @@ def toind(x, y):
     return x + 15 * y
 
 
-def int2array(line, augment=True):
+def int2array(line, train=True):
     """Helper function to generate features, policies and values.
     Args:
-        line: [mine, yours, color, action, value]
-    return: example, policy, value list of augmentations
+        line: [mine, yours, color, action, value] for train
+              [mine, yours, color] for evaluate
+    return: examples, policies, values list of augmentations for train
+            one signle example 3d-array for evaluate
 
     """
     example = np.zeros((15, 15, 3), dtype=np.float32)
@@ -62,7 +64,11 @@ def int2array(line, augment=True):
         tmp = np.fromstring(intstr[::-1], np.int8) - 48
         tmp = tmp.reshape((15, 15))
         example[:, :, channel] = tmp.T
-    example[axis(int(line[3]))[0], axis(int(line[3]))[1], 2] = 1.0
+    if train:
+        example[axis(int(line[3]))[0], axis(int(line[3]))[1], 2] = 1.0
+    else:
+        example[:, :, 2] = int(line[2])
+        return example
 
     examples = []
     policies = []
@@ -77,8 +83,6 @@ def int2array(line, augment=True):
         examples.append(tmp)
         policies.append(policy)
         values.append(float(line[4]))
-        if not augment:
-            return examples, policies, values
 
     rev_example = example[::-1, :, :]
     for k in range(4):

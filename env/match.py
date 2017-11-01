@@ -4,7 +4,7 @@
 import os
 
 import multiprocessing
-import threading
+import time
 import itertools
 import names
 import config
@@ -25,9 +25,11 @@ for (ai1, ai2) in itertools.combinations_with_replacement(ai_version, 2):
 for ai in ai_version:
     schedule[(ai, ai)] = 0
 
-# for ai in ai_version:
-#     ai_processes[ai] = multiprocessing.Process(target=start_ai, args=(ai, ))
-#     ai_processes[ai].start()
+for ai in ai_version:
+    ai_processes[ai] = multiprocessing.Process(target=start_ai, args=(ai, ))
+    ai_processes[ai].start()
+
+time.sleep(4)
 
 for match in schedule:
     for num in range(schedule[match]):
