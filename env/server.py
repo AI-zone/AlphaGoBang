@@ -1,14 +1,11 @@
-# @Author: chenyu
-# @Date:   20_Oct_2017
-# @Email:  yu.chen@pku.edu.cn
-# @Filename: server.py
-# @Last modified by:   chenyu
-# @Last modified time: 21_Oct_2017
+"""Server."""
+# pylint: disable-msg=C0103
+# pylint: disable-msg=E1101
+# pylint: disable-msg=E0632
 
 import threading
 import numpy as np
 import zmq
-import time
 import msgpack
 import msgpack_numpy
 from env.gobang import Game
@@ -19,73 +16,81 @@ msgpack_numpy.patch()
 class Server(threading.Thread):
     """Server."""
 
-    def __init__(self, sid):
+    def __init__(self, server_id, player1_id, player2_id):
         super().__init__()
-        self.g = Game()
-        self.players_color = {}
-        self.sid = sid
-        self.offset = None
+        self.g = [Game() for i in range(config.GAMEPARALELL)]
+        self.server_id = server_id
+        seats = [player1_id, player2_id]
+        self.seats = [[
+            bytes('%s-%d' % (seats[i % 2], i), 'utf8'),
+            bytes('%s-%d' % (seats[1 - i % 2], i), 'utf8')
+        ] for i in range(config.GAMEPARALELL)]
+        self.socket = None
+        self.statistics = {
+            player1_id: {k: 0
+                         for k in 'BWJE'},
+            player2_id: {k: 0
+                         for k in 'BWJE'},
+        }
 
     def _buildsocket(self):
         context = zmq.Context()
-        socket = context.socket(zmq.ROUTER)
-        socket.bind('ipc://./tmp/server' + str(self.sid))
-        self.socket = socket
-        self.addr = []
-        for _ in range(config.MODE):
-            _addr, content = self.socket.recv_multipart()
-            self.addr.append(_addr)
-        print("FINISH build socket")
+        self.socket = context.socket(zmq.ROUTER)
+        self.socket.bind('ipc://./tmp/server_%s' % self.server_id)
+        for _ in range(2 * config.GAMEPARALELL):
+            self._recv()
+        print("%s FINISH build socket" % self.server_id)
 
-    def _send(self, end=None):
-        if not end:
-            self.socket.send_multipart([
-                self.addr[(self.g.t + self.offset) % config.MODE],
-                msgpack.dumps((self.g.t, str(self.g.black), str(self.g.white)))
-            ])
+    def _send_state(self, gid, result):
+        """
+            state:  t(or BWJE), black, white
+        """
+        pid = self.g[gid].t % 2
+        if result == 'P':
+            state = (self.g[gid].t, str(self.g[gid].black), str(
+                self.g[gid].white))
+            self.socket.send_multipart(
+                [self.seats[gid][pid],
+                 msgpack.dumps(state)])
+        elif result in 'BWJE':
+            state = (result, str(self.g[gid].black), str(self.g[gid].white))
+            self.socket.send_multipart(
+                [self.seats[gid][0], msgpack.dumps(state)])
+            self.socket.send_multipart(
+                [self.seats[gid][1], msgpack.dumps(state)])
+            player = '-'.join(self.seats[gid][1
+                                              - pid].decode().split('-')[:-1])
+            self.statistics[player][result] += 1
+            self._new_game(gid)
+            self._send_state(gid, 'P')
         else:
-            for i in range(config.MODE):
-                self.socket.send_multipart([
-                    self.addr[i],
-                    msgpack.dumps((end, str(self.g.black), str(self.g.white)))
-                ])
+            raise RuntimeError("Invalid result %s" % result)
 
     def _recv(self):
-        _addr, content = self.socket.recv_multipart()
+        _, content = self.socket.recv_multipart()
         return msgpack.loads(content)
 
-    def _new_game(self):
-        self.g.newround()
+    def _new_game(self, gid):
+        self.seats[gid] = self.seats[gid][::-1]
+        self.g[gid].newround()
 
-    def _run_a_round(self):
-        self.offset = np.random.randint(2)
-        self._new_game()
+    def _run_infinite_round(self):
+        for gid in range(config.GAMEPARALELL):
+            self._new_game(gid)
+            self._send_state(gid, 'P')
 
-        for _ in range(config.GAMELENGTH):
-            self._send()
-            x, y = self._recv()
-            result = self.g.add(x, y)
-            if result in 'BWJ':
-                self._send(result)
-                print('Finish a round', result)
-                return
-            elif result == 'F':
-                print('##########')
-        # special tag
-        self._send('E')
+        while True:
+            x, y, gid = self._recv()
+            result = self.g[gid].add(x, y)
+            if self.g[gid].t > config.GAMELENGTH:
+                result = 'E'
+            self._send_state(gid, result)
 
     def run(self):
         np.random.seed()
         self._buildsocket()
-        while True:
-            self._run_a_round()
-            self.g.show()
-            # input("ENTER TO CONTINUE")
+        self._run_infinite_round()
 
 
 if __name__ == "__main__":
-    f = open('/data/gobang/selfplay/' + str(int(time.time())), 'a')
-    f.close()
-    servers = [Server(sid) for sid in range(config.NUMPARALELL)]
-    for s in servers:
-        s.start()
+    pass

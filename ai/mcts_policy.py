@@ -1,3 +1,7 @@
+"""MCTD"""
+# pylint: disable-msg=C0103
+# pylint: disable-msg=E1101
+# pylint: disable-msg=E0632
 import sys
 import numpy as np
 import math
@@ -11,7 +15,6 @@ import numpy as np
 msgpack_numpy.patch()
 
 import threading
-from multiprocessing.dummy import Pool as ThreadPool
 
 lock = threading.Lock()
 
@@ -48,6 +51,7 @@ def make_mask(action):
 
 
 class Node():
+    """state node."""
     __slots__ = ['t', 'N', 'W', 'mine', 'yours', 'p', 'v', 'mask']
 
     def __init__(self, t, black, white, mask):
@@ -70,21 +74,21 @@ class Node():
 
 class Tree():
     """MCTS."""
-    __slots__ = ['nodes', 'mask', 'socket', 'identity', 'sid']
+    __slots__ = ['nodes', 'mask', 'socket', 'player_id', 'model_name', 'lock']
 
-    def __init__(self, sid, identity):
+    def __init__(self, player_id, lock):
         self.nodes = {}
         self.socket = None
-        self.identity = identity
-        self.sid = sid
+        self.player_id = player_id
+        self.model_name = player_id.split('_')[1]
         self._buildsockets()
+        self.lock = lock
 
     def _buildsockets(self):
         context = zmq.Context()
         self.socket = context.socket(zmq.DEALER)
-        self.socket.setsockopt(zmq.IDENTITY, self.identity)
-        self.socket.connect('ipc://./tmp/oracle_recv%d.ipc' % self.sid)
-        print("FINISH build socket")
+        self.socket.setsockopt_string(zmq.IDENTITY, self.player_id)
+        self.socket.connect('ipc://./tmp/oracle_%s' % self.model_name)
 
     def QnU(self, t, s_t, a, begin):
         """s_t: (black, white), a: action in [0, 224]. begin: global_step"""
@@ -94,7 +98,7 @@ class Tree():
             swap = -1
         next_s, _ = move_state(t, *s_t, a, False)
         if next_s in self.nodes:
-            Q = self.nodes[next_s].W / self.nodes[next_s].N
+            Q = self.nodes[next_s].W / (self.nodes[next_s].N + 1)
             U = self.nodes[s_t].p[a] * math.sqrt(self.nodes[s_t].N) / (
                 1 + self.nodes[next_s].N)
         else:
@@ -111,18 +115,19 @@ class Tree():
             isleaf: when game is terminal, reward. 1 for win, -1 for ban
         """
         cur = self.nodes[s_t]
-        cur.N += 1
-        if isleaf == 1:
-            if simu_step % 2 == 1:  # black win
-                cur.W += 1
-                return 1
-            else:  # white win
+        with self.lock:
+            cur.N += 1
+            if isleaf == 1:
+                if simu_step % 2 == 1:  # black win
+                    cur.W += 1
+                    return 1
+                # white win
                 cur.W += -1
                 return -1
-        elif isleaf == -1:
-            if simu_step % 2 == 1:  # black ban
-                cur.W += -1
-                return -1
+            elif isleaf == -1:
+                if simu_step % 2 == 1:  # black ban
+                    cur.W += -1
+                    return -1
 
         if simu_step >= begin + config.L:
             # return self.nodes[s_t].v
@@ -135,10 +140,12 @@ class Tree():
         s_tplus1, isleaf = move_state(simu_step, *s_t, action)
         if s_tplus1 not in self.nodes:
             #  create Node
-            self.nodes[s_tplus1] = Node(simu_step + 1, *s_tplus1,
-                                        cur.mask | make_mask(action))
+            with self.lock:
+                self.nodes[s_tplus1] = Node(simu_step + 1, *s_tplus1,
+                                            cur.mask | make_mask(action))
         v = self._simulate(begin, simu_step + 1, s_tplus1, isleaf)
-        cur.W += v
+        with self.lock:
+            cur.W += v
         return v
 
     def get_pi(self, t, black, white):
@@ -146,17 +153,14 @@ class Tree():
         s_t = (black, white)
         if s_t not in self.nodes:
             #  create Node
-            new_mask = gobit[(7, 7)]
-            for ind in range(225):
-                if gobit[axis(ind)] & ((s_t[0] | s_t[1])):
-                    new_mask = new_mask | make_mask(ind)
-            self.nodes[s_t] = Node(t, *s_t, new_mask)
+            with self.lock:
+                new_mask = gobit[(7, 7)]
+                for ind in range(225):
+                    if gobit[axis(ind)] & ((s_t[0] | s_t[1])):
+                        new_mask = new_mask | make_mask(ind)
 
-        # pool = ThreadPool(config.GAMEPARALELL)
-        # paras = [(t, t, s_t) for _ in range(config.NUM_SIMULATIONS)]
-        # pool.starmap(self._simulate, paras)
-        # pool.close()
-        # pool.join()
+                self.nodes[s_t] = Node(t, *s_t, new_mask)
+
         while self.nodes[s_t].N < config.NUM_SIMULATIONS:
             self._simulate(t, t, s_t)
         empty = legal(s_t[0], s_t[1], t)
@@ -170,5 +174,4 @@ class Tree():
 
 
 if __name__ == "__main__":
-    tree = Tree(0, 0)
-    tree.get_pi(0, 0, 0)
+    pass

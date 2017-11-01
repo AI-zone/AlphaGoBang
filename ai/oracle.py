@@ -9,13 +9,14 @@ while True:
 # pylint: disable-msg=E1129
 import os
 import sys
-used_gpu = sys.argv[1]
+used_gpu = '0'
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = used_gpu
 
 import tensorflow as tf
 import numpy as np
 import threading
+import multiprocessing
 from tensorflow.contrib import predictor
 import zmq
 import msgpack
@@ -24,29 +25,25 @@ from env.gobang import int2array
 msgpack_numpy.patch()
 
 
-def call_saved_model():
-    model_path = '/data/gobang/aipath/'
-    model_list = os.listdir(model_path)
-    model_list.sort()
-    best_model = model_path + model_list[-1]
+def call_saved_model(model_path):
     policy_fn = predictor.from_saved_model(
-        best_model, signature_def_key='predict/policy')
+        model_path, signature_def_key='predict/policy')
     value_fn = predictor.from_saved_model(
-        best_model, signature_def_key='predict/value')
+        model_path, signature_def_key='predict/value')
     return policy_fn, value_fn
 
 
 class Runner():
-    def __init__(self, policy_fn, value_fn, sid):
+    def __init__(self, policy_fn, value_fn, model_name):
         self.cache = {}
         self.policy_fn = policy_fn
         self.value_fn = value_fn
-        self.sid = sid
+        self.model_name = model_name
 
     def _buildsockets(self):
         context = zmq.Context()
         self.socket = context.socket(zmq.ROUTER)
-        self.socket.bind('ipc://./tmp/oracle_recv%d.ipc' % sid)
+        self.socket.bind('ipc://./tmp/oracle_%s' % self.model_name)
 
     def _continuous_recv(self):
 
@@ -73,12 +70,19 @@ class Runner():
             self._reply((p['probabilities'], v), identity)
 
 
-if __name__ == "__main__":
-    sid = int(sys.argv[2])
+def start_ai(model_name):
+    model_path = '/data/gobang/aipath/' + model_name
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.2)
     session_config = tf.ConfigProto(gpu_options=gpu_options)
     sess = tf.Session(config=session_config)
     with sess.as_default():
-        policy_fn, value_fn = call_saved_model()
-        runner = Runner(policy_fn, value_fn, sid)
+        policy_fn, value_fn = call_saved_model(model_path)
+        runner = Runner(policy_fn, value_fn, model_name)
         runner.run()
+
+
+if __name__ == "__main__":
+    ai_process = multiprocessing.Process(
+        target=start_ai, args=('Petrillo-0001', ))
+    ai_process.start()
+    ai_process.join()

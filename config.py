@@ -6,7 +6,8 @@
 # @Last modified time: 21_Oct_2017
 
 import multiprocessing
-
+import names
+import os
 NUM_CPU = multiprocessing.cpu_count()
 
 MODE = 1  # 1: pure self play  2: between AI
@@ -17,14 +18,13 @@ else:
 
 NUM_SIMULATIONS = 400
 INFERENCE_BATCHSIZE = 256
-GAMEPARALELL = 256
+GAMEPARALELL = 10
 TEMPERATURE = 0.6
 EXPLORATION = 0.2
 SIZE = 225
 L = 10
 GAMELENGTH = 30
 
-PUNISH = -0.8  # for no result after L steps
 DISTANCE = 1  # 0 mean no mask
 
 LEARNINGRATE = 0.001

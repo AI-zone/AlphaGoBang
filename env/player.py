@@ -1,78 +1,63 @@
-# @Author: chenyu
-# @Date:   20_Oct_2017
-# @Email:  yu.chen@pku.edu.cn
-# @Filename: __play__.py
-# @Last modified by:   chenyu
-# @Last modified time: 21_Oct_2017
+"""Player"""
+# pylint: disable-msg=C0103
+# pylint: disable-msg=E1101
+# pylint: disable-msg=E0632
 
 import multiprocessing
+import threading
 import os
-import time
 import math
 import zmq
 import msgpack
 import msgpack_numpy
 import numpy as np
-import math
 import config
 
 from ai.mcts_policy import Tree
-from env.gobang import axis, legal, show_pi, toind, posswap
+from env.gobang import axis, legal, show_pi, toind
 msgpack_numpy.patch()
 
-selfplayfiles = os.listdir('/data/gobang/selfplay/')
-selfplayfiles.sort()
-selfplaylog = open('/data/gobang/selfplay/' + selfplayfiles[-1], 'a')
+
+def _recv_server(socket):
+    """Return state:  t(or BWJE), black, white.
+    """
+    content = socket.recv()
+    content = msgpack.loads(content)
+    content[1] = int(content[1])
+    content[2] = int(content[2])
+    return content
+
+
+def _send_server(socket, content):
+    socket.send(msgpack.dumps(content))
 
 
 class Player(multiprocessing.Process):
-    """
-    一个Player同时玩K局，公用1个Tree，Tree的节点访问次数到1600就直接输出pi，
-    否则继续扩展。这样不同对局累积下来的经验可以共享，效率高一些.
+    """Player.
+    Properties:
+        tree:   shared MCTS
+        memory: dictionary with key time and
+                value [mine, yours, color, action, value]
     """
 
-    def __init__(self, sid, player_id):
+    def __init__(self, server_id, player_id):
         super().__init__()
-        self.sid = sid
+        self.server_id = server_id
         self.player_id = player_id
-        self.tree = Tree(self.sid, b'%d-%d' % (self.sid, self.player_id))
-        self.memory = {}  # self.memory[t] = [(mine, yours), action, z]
-        self.round_counter = 0
-
-    def _buildsockets(self):
-        sockets = {}
-        context = zmq.Context()
-        self.server_socket = context.socket(zmq.DEALER)
-        self.server_socket.setsockopt_string(zmq.IDENTITY, str(self.player_id))
-        self.server_socket.connect('ipc://./tmp/server' + str(self.sid))
-        self.server_socket.send(msgpack.dumps(self.player_id))
-
-        print("FINISH build socket")
-
-    def _recv_server(self):
-        """从server接收board局势."""
-        content = self.server_socket.recv()
-        content = msgpack.loads(content)
-        content[1] = int(content[1])
-        content[2] = int(content[2])
-        return content
-
-    def _send_server(self, content):
-        self.server_socket.send(msgpack.dumps(content))
-
-    def _get_inference(self, content):
-        """通过zmq向inference询问pv"""
-        return np.random.random([226])
+        self.memory = {}
+        self.log_writter = open('/data/gobang/selfplay/%s--%s' %
+                                (server_id, player_id), 'a')
+        self.lock = threading.Lock()
+        self.tree = Tree(self.player_id, self.lock)
 
     def _get_pi(self, board):
         """board=t,black,white"""
         return self.tree.get_pi(*board)
 
-    def _get_action(self, board, pi):
-        """按pi 温度加权抽样"""
-        if self.sid == 0:
-            # only print server 0
-            print(self.round_counter, len(self.tree.nodes))
+    def _get_action(self, board, pi, gid):
+        """sample according to pi(with config.TENPERATURE)"""
+        if gid == 0:
+            print(len(self.tree.nodes))
             show_pi(board[1], board[2], pi)
         if config.TEMPERATURE == 0:
             ind = np.argmax(pi)
@@ -88,7 +73,7 @@ class Player(multiprocessing.Process):
         ind = np.random.choice(empty, p=probs)
         return axis(ind)
 
-    def _end_round(self, end):
+    def _end_round(self, end):  # pylint: disable-msg=R0912
         if end[0] == 'B':
             for t in self.memory:
                 if t % 2 == 0:
@@ -132,38 +117,41 @@ class Player(multiprocessing.Process):
                     str(self.memory[t][4] * math.pow(config.VALUE_DECAY,
                                                      game_len - t)),
                 ]
-            print(','.join(serielized), file=selfplaylog)
+            print(','.join(serielized), file=self.log_writter)
         self.memory = {}
-        self.round_counter += 1
-        if self.round_counter % 100 == 0:
-            self.tree = Tree(self.sid, b'%d-%d' % (self.sid, self.player_id))
 
-    def _run_a_round(self):
+    def _run_infinite_round(self, gid):
+        np.random.seed()
+        context = zmq.Context()
+        socket = context.socket(zmq.DEALER)
+        socket.setsockopt(zmq.IDENTITY,
+                          bytes('%s-%d' % (self.player_id, gid), 'utf8'))
+        socket.connect('ipc://./tmp/server_' + str(self.server_id))
+        socket.send(msgpack.dumps(self.player_id))
         while True:
-            board = self._recv_server()
+            board = _recv_server(socket)
             if isinstance(board[0], str):
                 self._end_round(board)
-                return
+                continue
             pi = self._get_pi(board)
-            action = self._get_action(board, pi)
+            action = self._get_action(board, pi, gid)
             color = board[0] % 2
             self.memory[board[0]] = [
                 board[1], board[2], color,
                 toind(*action), 0
             ]
-            self._send_server(action)
+            _send_server(socket, (*action, gid))
 
     def run(self):
-        np.random.seed()
-        self._buildsockets()
-        while True:
-            self._run_a_round()
+        threads = []
+        for i in range(config.GAMEPARALELL):
+            t = threading.Thread(target=self._run_infinite_round, args=(i, ))
+            t.daemon = True
+            threads.append(t)
+            t.start()
+        for t in threads:
+            t.join()
 
 
 if __name__ == "__main__":
-    players = [
-        Player(sid, i)
-        for i in range(config.MODE) for sid in range(config.NUMPARALELL)
-    ]
-    for p in players:
-        p.start()
+    pass

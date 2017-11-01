@@ -1,17 +1,15 @@
-# @Author: chenyu
-# @Date:   20_Oct_2017
-# @Email:  yu.chen@pku.edu.cn
-# @Filename: mcts.py
-# @Last modified by:   chenyu
-# @Last modified time: 20_Oct_2017
+# pylint: disable-msg=C0103
 import os
 import sys
+import shutil
+import names
 used_gpu = sys.argv[1]
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = used_gpu
 
 import tensorflow as tf
 import numpy as np
+import names
 import config
 
 from ai.net import model_fn
@@ -87,9 +85,10 @@ def my_numpy_input_fn(x,
 
 
 def load_data():
-    data_file_name = '/data/gobang/selfplay/1509455087'
+    data_file_name = '/data/gobang/dump_selfplay/1509455087'
     features, labels, values = get_data(data_file_name)
     train_size = int(len(features) * 0.7)
+    print('++++', train_size)
     afeatures = np.array(features[:train_size])
     alabels1 = np.array(labels[:train_size])
     alabels2 = np.array(values[:train_size])
@@ -129,18 +128,21 @@ if __name__ == "__main__":
         try:
             classifier.train(input_fn=train_input_fn)
             classifier.evaluate(input_fn=test_input_fn)
-            features = {'x': tf.placeholder(tf.float32, [None, 15, 15, 3])}
-            export_input_fn = tf.estimator.export.build_raw_serving_input_receiver_fn(
-                features)
-            servable_model_dir = "/data/gobang/init"
-            servable_model_path = classifier.export_savedmodel(
-                servable_model_dir, export_input_fn)
         except KeyboardInterrupt:
+            save = input("USER interrupt, save? Y/N")
+            if save == 'Y':
+                features = {'x': tf.placeholder(tf.float32, [None, 15, 15, 3])}
+                export_input_fn = tf.estimator.export.build_raw_serving_input_receiver_fn(
+                    features)
+                servable_model_dir = "/data/gobang/init"
+                servable_model_path = classifier.export_savedmodel(
+                    servable_model_dir, export_input_fn)
+                ai_ver = os.listdir('/data/gobang/aipath')
+                ai_name = names.get_last_name()
+                while any(ai_name in i for i in ai_ver):
+                    ai_name = names.get_last_name()
+                shutil.move(servable_model_path,
+                            '/data/gobang/aipath/%s-%04d' % (ai_name,
+                                                             len(ai_ver) + 1))
             print("USER interrupt")
-            # features = {'x': tf.placeholder(tf.float32, [None, 15, 15, 3])}
-            # export_input_fn = tf.estimator.export.build_raw_serving_input_receiver_fn(
-            #     features)
-            # servable_model_dir = "/data/gobang/init"
-            # servable_model_path = classifier.export_savedmodel(
-            #     servable_model_dir, export_input_fn)
             break

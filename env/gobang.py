@@ -1,20 +1,22 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# pylint: disable-msg=C0103
+# pylint: disable-msg=W0621
+# pylint: disable-msg=E1101
+# pylint: disable-msg=E0632
 """
 Created on Sat Aug  5 22:04:19 2017
 
 @author: chenyu
 """
-
-import config
 import pickle
+import config
 import numpy as np
 
 try:
     complete5, open4, open3 = pickle.load(open('./env/cached.pkl', 'rb'))
-except:
+except:  # pylint: disable-msg=W0702
     complete5, open4, open3 = 0, 0, 0
     print("run env/cache.py first")
+
 X = [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe]
 Y = [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe]
 
@@ -38,17 +40,20 @@ for x in X:
 
 # @profile
 def axis(ind):
+    """0-224 ind to axis (x, y)"""
     return ind % 15, ind // 15
 
 
 def toind(x, y):
+    """axis(x, y) to 0-224 ind"""
     return x + 15 * y
 
 
 def int2array(line, augment=True):
-    """
-    line: [mine, yours, color, action, value]
-    return: example, policy, value lis
+    """Helper function to generate features, policies and values.
+    Args:
+        line: [mine, yours, color, action, value]
+    return: example, policy, value list of augmentations
 
     """
     example = np.zeros((15, 15, 3), dtype=np.float32)
@@ -57,8 +62,7 @@ def int2array(line, augment=True):
         tmp = np.fromstring(intstr[::-1], np.int8) - 48
         tmp = tmp.reshape((15, 15))
         example[:, :, channel] = tmp.T
-    x, y = axis(int(line[3]))
-    example[x, y, 2] = 1.0
+    example[axis(int(line[3]))[0], axis(int(line[3]))[1], 2] = 1.0
 
     examples = []
     policies = []
@@ -91,22 +95,21 @@ def int2array(line, augment=True):
 
 # @profile
 def valid(black, white, x, y):
-    """在x,y落子是否合法. 即此处无子
+    """True if empty else False
     """
     return (not black & gobit[(x, y)]) and (not white & gobit[(x, y)])
 
 
 def posswap(t, black, white):
+    """Helper function that generates (mine, yours) board"""
     if t % 2 == 0:
         return black, white
-    else:
-        return white, black
+    return white, black
 
 
 # @profile
 def legal(black, white, t):
-    """返回所有合法落子ind
-    根据比赛规则：黑1必须天元，白1 3x3  黑2 5x5  白2没有限制"""
+    """Return valid moves list."""
     stones = black | white
     if t == 0:
         legal_list = [toind(7, 7)]
@@ -130,7 +133,7 @@ def legal(black, white, t):
     return legal_list
 
 
-def check(black, white, x, y, t):
+def check(black, white, x, y, t):  # pylint: disable-msg=R0914
     """check terminal.
     Args:
         black:  after action state
@@ -145,7 +148,7 @@ def check(black, white, x, y, t):
     fan = mine & mask_fan[14 - x + y]
     if any(i in complete5 for i in [row, col, zheng, fan]):
         return 1
-    # 33 44 判负
+    # 33 44
     num3 = 0
     num4 = 0
     empty = ~(mine | yours)
@@ -182,9 +185,9 @@ def show(black, white):
         for y in Y:
             if (x == 7) and (y == 7):
                 print("\033[%d;%d;%dm**\033[0m" % (0, 33, 41), end='')
-            elif (black & gobit[(x, y)]):
+            elif black & gobit[(x, y)]:
                 print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
-            elif (white & gobit[(x, y)]):
+            elif white & gobit[(x, y)]:
                 print("\033[%d;%d;%dm  \033[0m" % (0, 32, 42), end='')
             else:
                 print("  ", end='')
@@ -207,8 +210,12 @@ def show_np(mat):
         print("")
 
 
-def show_pi(black, white, pi):
-
+def show_pi(black, white, pi):  # pylint: disable-msg=R0912
+    """Plot the policy pi, along with board.
+    Args:
+        black, white: binary board int.
+        pi: numpy array of length 225.
+    """
     pi = pi / sum(pi) * 100
     pi = pi.reshape((15, 15)).T
     max_ind = axis(np.argmax(pi))
@@ -227,9 +234,9 @@ def show_pi(black, white, pi):
         for y in range(15):
             if (x == 7) and (y == 7):
                 print("\033[%d;%d;%dm**\033[0m" % (0, 33, 41), end='')
-            elif (black & gobit[(x, y)]):
+            elif black & gobit[(x, y)]:
                 print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
-            elif (white & gobit[(x, y)]):
+            elif white & gobit[(x, y)]:
                 print("\033[%d;%d;%dm  \033[0m" % (0, 32, 42), end='')
             elif (x == sx) and (y == sy):
                 print(
@@ -253,14 +260,6 @@ class Game():
     Args:
         x:  纵坐标，上面是0   好像和标准的不一样:(
         y:  横坐标，左边是0
-
-    返回:
-        'F':  非法
-        'P':  什么都没发生
-        'W':  白赢了
-        'B':  黑赢了
-
-    提供一个show() 函数，打印当前状态  x为黑， o为白
     """
 
     def __init__(self, t=1, black=gobit[(7, 7)], white=0):
@@ -270,13 +269,21 @@ class Game():
         self.logs = [(7, 7)]
 
     def newround(self, t=1, black=gobit[(7, 7)], white=0):
+        """Start a new game"""
         self.black = black
         self.white = white
         self.t = t
         self.logs = [(7, 7)]
 
     def add(self, x, y):
-        """落子"""
+        """Move
+        Return:
+            'F':  False
+            'P':  go on
+            'W':  white  win
+            'B':  black win
+            'J':  ban
+        """
         if not valid(self.white, self.black, x, y):
             raise RuntimeError('duplicated move')
         self.logs.append((x, y))
@@ -297,7 +304,7 @@ class Game():
         else:
             return "P"
 
-    def show(self):
+    def show(self):  # pylint: disable-msg=R0912
         """TODO: 根据self.logs在终端可视化棋谱"""
         log = {}
         style = 0
@@ -311,12 +318,12 @@ class Game():
         for i in range(15):
             for j in range(15):
                 if (i, j) in log:
-                    if (log[(i, j)] >= 100):
+                    if log[(i, j)] >= 100:
                         log[(i, j)] -= 100
                         stupid = 1
                     else:
                         stupid = 0
-                    if (log[(i, j)] % 2 == 0):
+                    if log[(i, j)] % 2 == 0:
                         b_color = 47
                         if stupid:
                             f_color = 31
