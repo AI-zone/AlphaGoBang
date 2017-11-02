@@ -110,8 +110,11 @@ def model_fn(features, labels, mode, params, config):
     head = tf.contrib.estimator.multi_head(
         [head1, head2], head_weights=[1.0, 1.0])
 
+    probs = tf.nn.softmax(logits_head1) + 1e-6
+    entropy = tf.reduce_mean(-tf.reduce_sum(probs * tf.log(probs), 1))
+
     def _train_op_fn(loss):
-        loss += 0.0  # add regularization
+        loss += 0.01 * entropy  # add regularization
         optimizer = tf.train.AdamOptimizer(params['learning_rate'])
         # optimizer = tf.train.ProximalAdagradOptimizer(
         #     learning_rate=params['learning_rate'],
