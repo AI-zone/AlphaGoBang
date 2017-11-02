@@ -4,7 +4,7 @@
 # pylint: disable-msg=E0632
 import math
 import queue
-
+import time
 import numpy as np
 import config
 from env.gobang import check, axis, gobit, legal
@@ -84,7 +84,7 @@ class Tree():
         else:
             Q = 0
             U = self.nodes[s_t].p[a] * math.sqrt(self.nodes[s_t].N)
-        return swap * Q + U * config.EXPLORATION
+        return swap * Q + U * config.VISIT_WEIGHT
 
     def _simulate(self, begin, simu_step, s_t, isleaf=0):
         """
@@ -95,6 +95,9 @@ class Tree():
             isleaf: when game is terminal, reward. 1 for win, -1 for ban
         """
         cur = self.nodes[s_t]
+        while (cur.N > config.UPDATE_DELAY * config.NUM_SIMULATIONS) and (
+                not cur.updated):
+            time.sleep(0.01)
         with self.lock:
             cur.N += 1
             if isleaf == 1:

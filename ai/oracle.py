@@ -69,7 +69,7 @@ class Runner():
             features, identity = self._continuous_recv()
             p = self.policy_fn({'x': features})
             v = self.value_fn({'x': features})
-            self._reply((p['probabilities'], v), identity)
+            self._reply((p['probabilities'], v['predictions']), identity)
 
 
 def start_ai(model_name):

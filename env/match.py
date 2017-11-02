@@ -19,7 +19,7 @@ server_threads = {}
 player_processes = {}
 ai_version = os.listdir('/data/gobang/aipath')
 for (ai1, ai2) in itertools.combinations_with_replacement(ai_version, 2):
-    schedule[(ai1, ai2)] = 1
+    schedule[(ai1, ai2)] = config.NUMPARALELL
 
 # reduce self-AI play
 for ai in ai_version:

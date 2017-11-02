@@ -44,9 +44,8 @@ class Player(multiprocessing.Process):
         super().__init__()
         self.server_id = server_id
         self.player_id = player_id
-        self.memory = {}
-        self.log_writter = open('/data/gobang/selfplay/%s--%s' %
-                                (server_id, player_id), 'a')
+        self.memory = {i: {} for i in range(config.GAMEPARALELL)}
+        self.log_writter = open('/data/gobang/selfplay/%s' % server_id, 'a')
         self.lock = threading.Lock()
         self.tree = Tree(self.player_id, self.lock)
 
@@ -57,7 +56,8 @@ class Player(multiprocessing.Process):
     def _get_action(self, board, pi, gid):
         """sample according to pi(with config.TENPERATURE)"""
         if gid == 0:
-            print(len(self.tree.nodes), self.tree.to_evaluate.qsize())
+            print(self.player_id,
+                  len(self.tree.nodes), self.tree.to_evaluate.qsize())
             show_pi(board[1], board[2], pi)
         if config.TEMPERATURE == 0:
             ind = np.argmax(pi)
@@ -73,52 +73,56 @@ class Player(multiprocessing.Process):
         ind = np.random.choice(empty, p=probs)
         return axis(ind)
 
-    def _end_round(self, end):  # pylint: disable-msg=R0912
+    def _end_round(self, end, gid):  # pylint: disable-msg=R0912
         if end[0] == 'B':
-            for t in self.memory:
+            for t in self.memory[gid]:
                 if t % 2 == 0:
-                    self.memory[t][4] = 1
+                    self.memory[gid][t][4] = 1
                 else:
-                    self.memory[t][4] = -1
+                    self.memory[gid][t][4] = -1
         elif end[0] == 'W':
-            for t in self.memory:
+            for t in self.memory[gid]:
                 if t % 2 == 0:
-                    self.memory[t][4] = -1
+                    self.memory[gid][t][4] = -1
                 else:
-                    self.memory[t][4] = 1
+                    self.memory[gid][t][4] = 1
         elif end[0] == 'J':
-            self.memory = {}
-            return
-            # for t in self.memory:
-            #     if t % 2 == 0:
-            #         self.memory[t][4] = -1
-            #     else:
-            #         self.memory[t][4] = 1
+            for t in self.memory[gid]:
+                if t % 2 == 0:
+                    self.memory[gid][t][4] = -1
+                else:
+                    self.memory[gid][t][4] = 1
+
         elif end[0] == 'E':
-            self.memory = {}
-            return
-        game_len = len(self.memory)
-        for t in self.memory:
+            for t in self.memory[gid]:
+                if t % 2 == 0:
+                    self.memory[gid][t][4] = -config.WHITE_ALLOWANCE
+                else:
+                    self.memory[gid][t][4] = config.WHITE_ALLOWANCE
+
+        game_len = len(self.memory[gid])
+        for t in self.memory[gid]:
             if t % 2 == 0:
                 serielized = [
-                    str(self.memory[t][0]),
-                    str(self.memory[t][1]),
-                    str(self.memory[t][2]),
-                    str(self.memory[t][3]),
-                    str(self.memory[t][4] * math.pow(config.VALUE_DECAY,
-                                                     game_len - t)),
+                    str(self.memory[gid][t][0]),
+                    str(self.memory[gid][t][1]),
+                    str(self.memory[gid][t][2]),
+                    str(self.memory[gid][t][3]),
+                    str(self.memory[gid][t][4] * math.pow(
+                        config.VALUE_DECAY, game_len - t)),
                 ]
             else:
                 serielized = [
-                    str(self.memory[t][1]),
-                    str(self.memory[t][0]),
-                    str(self.memory[t][2]),
-                    str(self.memory[t][3]),
-                    str(self.memory[t][4] * math.pow(config.VALUE_DECAY,
-                                                     game_len - t)),
+                    str(self.memory[gid][t][1]),
+                    str(self.memory[gid][t][0]),
+                    str(self.memory[gid][t][2]),
+                    str(self.memory[gid][t][3]),
+                    str(self.memory[gid][t][4] * math.pow(
+                        config.VALUE_DECAY, game_len - t)),
                 ]
+
             print(','.join(serielized), file=self.log_writter)
-        self.memory = {}
+        self.memory[gid] = {}
 
     def _run_infinite_round(self, gid):
         np.random.seed()
@@ -130,13 +134,14 @@ class Player(multiprocessing.Process):
         socket.send(msgpack.dumps(self.player_id))
         while True:
             board = _recv_server(socket)
-            if isinstance(board[0], str):
-                self._end_round(board)
+            if str(board[0]) in 'BWJE':
+                with self.lock:
+                    self._end_round(board, gid)
                 continue
             pi = self._get_pi(board)
             action = self._get_action(board, pi, gid)
             color = board[0] % 2
-            self.memory[board[0]] = [
+            self.memory[gid][board[0]] = [
                 board[1], board[2], color,
                 toind(*action), 0
             ]
@@ -153,14 +158,22 @@ class Player(multiprocessing.Process):
         while True:
             # print(self.tree.to_evaluate.qsize())
             batch = []
+            states = []
             for _ in range(config.INFERENCE_BATCHSIZE):
                 t, black, white = self.tree.to_evaluate.get()
                 mine, yours = posswap(t, black, white)
                 color = t % 2
                 batch.append((str(mine), str(yours), color))
-
+                states.append((black, white))
             socket.send(msgpack.dumps((batch, self.player_id)))
-            result = socket.recv()
+            result = msgpack.loads(socket.recv())
+            assert len(states) == len(result[0])
+            assert len(states) == len(result[1])
+            for ind, state in enumerate(states):
+                with self.lock:
+                    self.tree.nodes[state].p = result[0][ind]
+                    self.tree.nodes[state].v = result[1][ind]
+                    self.tree.nodes[state].updated = True
 
     def run(self):
         threads = []

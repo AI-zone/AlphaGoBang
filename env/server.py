@@ -8,8 +8,9 @@ import numpy as np
 import zmq
 import msgpack
 import msgpack_numpy
-from env.gobang import Game
 import config
+from env.gobang import Game
+from pprint import pprint
 msgpack_numpy.patch()
 
 
@@ -63,6 +64,8 @@ class Server(threading.Thread):
             self.statistics[player][result] += 1
             self._new_game(gid)
             self._send_state(gid, 'P')
+            if gid == 0:
+                pprint(self.statistics)
         else:
             raise RuntimeError("Invalid result %s" % result)
 
