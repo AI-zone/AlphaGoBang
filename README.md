@@ -15,13 +15,11 @@ MCTS and RL!
 (2017.10.21) Speed test, single process: 13s / step (800 simulations with depth 40)
 
 
-
-
-![avatar](./docs/implementation0/Slide1.jpg)
-![avatar](./docs/implementation0/Slide2.jpg)
-![avatar](./docs/implementation0/Slide3.jpg)
 ![avatar](./docs/implementation0/Slide4.jpg)
-![avatar](./docs/implementation0/Slide5.jpg)
+
+![avatar](./docs/implementation0/Slide6.jpg)
+![avatar](./docs/implementation0/Slide7.jpg)
+![avatar](./docs/implementation0/Slide8.jpg)
 
 
 ## Working
