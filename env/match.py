@@ -18,12 +18,13 @@ ai_processes = {}
 server_threads = {}
 player_processes = {}
 ai_version = os.listdir('/data/gobang/aipath')
+ai_version = ['Martin-0003']
 for (ai1, ai2) in itertools.combinations_with_replacement(ai_version, 2):
     schedule[(ai1, ai2)] = config.NUMPARALELL
 
 # reduce self-AI play
 for ai in ai_version:
-    schedule[(ai, ai)] = 0
+    schedule[(ai, ai)] = config.NUMPARALELL
 
 for ai in ai_version:
     ai_processes[ai] = multiprocessing.Process(target=start_ai, args=(ai, ))
@@ -43,7 +44,7 @@ for match in schedule:
         print(server_id, player1_id, player2_id, sep='\t')
         server_threads[server_id] = Server(server_id, player1_id, player2_id)
         server_threads[server_id].start()
-        player_processes[player1_id] = Player(server_id, player1_id)
+        player_processes[player1_id] = Player(server_id, player1_id, num == 0)
         player_processes[player1_id].start()
-        player_processes[player2_id] = Player(server_id, player2_id)
+        player_processes[player2_id] = Player(server_id, player2_id, num == 0)
         player_processes[player2_id].start()

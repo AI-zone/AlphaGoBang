@@ -40,7 +40,7 @@ class Player(multiprocessing.Process):
                 value [mine, yours, color, action, value]
     """
 
-    def __init__(self, server_id, player_id):
+    def __init__(self, server_id, player_id, showlog):
         super().__init__()
         self.server_id = server_id
         self.player_id = player_id
@@ -48,6 +48,8 @@ class Player(multiprocessing.Process):
         self.log_writter = open('/data/gobang/selfplay/%s' % server_id, 'a')
         self.lock = threading.Lock()
         self.tree = Tree(self.player_id, self.lock)
+        self.showlog = showlog
+        self.age = 0
 
     def _get_pi(self, board):
         """board=t,black,white"""
@@ -55,9 +57,10 @@ class Player(multiprocessing.Process):
 
     def _get_action(self, board, pi, gid):
         """sample according to pi(with config.TENPERATURE)"""
-        if gid == 0:
-            print(self.player_id,
-                  len(self.tree.nodes), self.tree.to_evaluate.qsize())
+        if (gid == 0) and self.showlog:
+            print('player:%s, age:%d, IQ:%d, learning:%d' %
+                  (self.player_id, self.age, len(self.tree.nodes),
+                   self.tree.to_evaluate.qsize()))
             show_pi(board[1], board[2], pi)
         if config.TEMPERATURE == 0:
             ind = np.argmax(pi)
@@ -123,6 +126,12 @@ class Player(multiprocessing.Process):
 
             print(','.join(serielized), file=self.log_writter)
         self.memory[gid] = {}
+        with self.lock:
+            self.age += 1
+        if self.age > 1000:
+            with self.lock:
+                self.age = 0
+                self.tree.nodes = {}
 
     def _run_infinite_round(self, gid):
         np.random.seed()

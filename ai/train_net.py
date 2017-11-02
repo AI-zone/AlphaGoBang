@@ -85,7 +85,7 @@ def my_numpy_input_fn(x,
 
 
 def load_data():
-    data_file_name = '/data/gobang/dump_selfplay/1509455087'
+    data_file_name = '/data/gobang/dump_selfplay/00010002'
     features, labels, values = get_data(data_file_name)
     train_size = int(len(features) * 0.7)
     print('++++', train_size)
@@ -129,6 +129,7 @@ if __name__ == "__main__":
             classifier.train(input_fn=train_input_fn)
             classifier.evaluate(input_fn=test_input_fn)
         except KeyboardInterrupt:
+            classifier.evaluate(input_fn=test_input_fn)
             save = input("USER interrupt, save? Y/N")
             if save == 'Y':
                 features = {'x': tf.placeholder(tf.float32, [None, 15, 15, 3])}

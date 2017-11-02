@@ -25,7 +25,7 @@ UPDATE_DELAY = 0.1  # epsilon greedy in MCTS
 SIZE = 225
 
 L = 8
-GAMELENGTH = 25
+GAMELENGTH = 45
 DISTANCE = 1  # 0 mean no mask
 WHITE_ALLOWANCE = 0.5
 
