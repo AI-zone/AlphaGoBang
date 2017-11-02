@@ -46,8 +46,6 @@ class Node():
     __slots__ = ['t', 'N', 'W', 'p', 'v', 'mask', 'updated']
 
     def __init__(self, t, mask):
-        """
-        """
         self.t = t
         self.N = 0
         self.W = 0
