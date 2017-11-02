@@ -6,8 +6,8 @@ MCTS and RL!
 
 ## CURRENT STAGE
 
-(2017.11.2) AI understands open three. 
-
+(2017.11.2) It seems that AI understands open three. Red for BLACK and green for WHITE, numbers for pi (in percentage) and `--` for pi less than 1%.
+![avatar](./docs/selfplay.png)
 (2017.10.23) 1s /step (1 process) (200 simulations with depth 45), without network evaluation. Clear MCTS Tree every 100 round for memory reasons. 
 
 (2017.10.21) Finish MCTS (hope so), with randomly choosen (p, v).
@@ -18,7 +18,6 @@ MCTS and RL!
 
 
 ![avatar](./docs/implementation0/Slide1.jpg)
-
 ![avatar](./docs/implementation0/Slide2.jpg)
 ![avatar](./docs/implementation0/Slide3.jpg)
 ![avatar](./docs/implementation0/Slide4.jpg)
