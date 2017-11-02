@@ -85,7 +85,7 @@ def my_numpy_input_fn(x,
 
 
 def load_data():
-    data_file_name = '/data/gobang/dump_selfplay/00010002'
+    data_file_name = '/data/gobang/dump_selfplay/00030003'
     features, labels, values = get_data(data_file_name)
     train_size = int(len(features) * 0.7)
     print('++++', train_size)
