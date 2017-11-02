@@ -126,12 +126,7 @@ class Player(multiprocessing.Process):
 
             print(','.join(serielized), file=self.log_writter)
         self.memory[gid] = {}
-        with self.lock:
-            self.age += 1
-        if self.age > 1000:
-            with self.lock:
-                self.age = 0
-                self.tree.nodes = {}
+        self.age += 1
 
     def _run_infinite_round(self, gid):
         np.random.seed()
