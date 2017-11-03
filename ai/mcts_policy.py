@@ -136,6 +136,19 @@ class Tree():
 
     def get_pi(self, t, black, white):
         """返回s_t状态开始的pi值， 注意：node永远是需要下棋的一方在第0张矩阵."""
+        # if opponent move at ind and win,
+        # I must move at ind.
+        for ind in range(225):
+            if not gobit[axis(ind)] & ((black | white)):
+                if t % 2 == 0:
+                    add = (black, white + gobit[axis(ind)])
+                else:
+                    add = (black + gobit[axis(ind)], white)
+                if check(*add, *axis(ind), t + 1) == 1:
+                    pi = np.zeros(225)
+                    pi[ind] = config.NUM_SIMULATIONS * 0.99
+                    return pi
+
         s_t = (black, white)
         if s_t not in self.nodes:
             #  create Node
@@ -144,17 +157,6 @@ class Tree():
                 for ind in range(225):
                     if gobit[axis(ind)] & ((s_t[0] | s_t[1])):
                         new_mask = new_mask | _make_mask(ind)
-                    else:
-                        # if opponent move at ind and win,
-                        # I must move at ind.
-                        if t % 2 == 0:
-                            add = (black, white + gobit[axis(ind)])
-                        else:
-                            add = (black + gobit[axis(ind)], white)
-                        if check(*add, *axis(ind), t + 1) == 1:
-                            pi = np.zeros(225)
-                            pi[ind] = 1.0
-                            return pi
 
                 self.nodes[s_t] = Node(t, new_mask)
                 self.to_evaluate.put((t, black, white))
