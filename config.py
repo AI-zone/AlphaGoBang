@@ -14,7 +14,7 @@ MODE = 1  # 1: pure self play  2: between AI
 if NUM_CPU < 10:
     NUMPARALELL = 2
 else:
-    NUMPARALELL = 8
+    NUMPARALELL = 10
 
 NUM_SIMULATIONS = 400
 INFERENCE_BATCHSIZE = 256

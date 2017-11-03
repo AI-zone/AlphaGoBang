@@ -6,7 +6,7 @@
 # @Last modified time: 19_Oct_2017
 """Provides mnist_estimator function for generating tf.estimator.Estimators."""
 import os
-import config
+import config as hyper_config
 import tensorflow as tf
 
 
@@ -114,7 +114,7 @@ def model_fn(features, labels, mode, params, config):
     entropy = tf.reduce_mean(-tf.reduce_sum(probs * tf.log(probs), 1))
 
     def _train_op_fn(loss):
-        loss += config.ENTROPY_REGUL * entropy  # add regularization
+        loss += hyper_config.ENTROPY_REGUL * entropy  # add regularization
         optimizer = tf.train.AdamOptimizer(params['learning_rate'])
         # optimizer = tf.train.ProximalAdagradOptimizer(
         #     learning_rate=params['learning_rate'],

@@ -263,7 +263,7 @@ def show_pi(black, white, pi, p, values, Q):  # pylint: disable-msg=R0912
                 print("--", end='')
             else:
                 print("  ", end='')
-        print("      ", end='')
+        print("    ", end='')
         for y in range(15):
             if (x == 7) and (y == 7):
                 print("\033[%d;%d;%dm**\033[0m" % (0, 33, 41), end='')
@@ -277,7 +277,7 @@ def show_pi(black, white, pi, p, values, Q):  # pylint: disable-msg=R0912
                 print("--", end='')
             else:
                 print("  ", end='')
-        print("      ", end='')
+        print("    ", end='')
         for y in range(15):
             if (x == 7) and (y == 7):
                 print("\033[%d;%d;%dm**\033[0m" % (0, 33, 41), end='')
@@ -297,7 +297,7 @@ def show_pi(black, white, pi, p, values, Q):  # pylint: disable-msg=R0912
                     end='')
             else:
                 print("  ", end='')
-        print("      ", end='')
+        print("    ", end='')
         for y in range(15):
             if (x == 7) and (y == 7):
                 print("\033[%d;%d;%dm**\033[0m" % (0, 33, 41), end='')
