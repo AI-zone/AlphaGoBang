@@ -12,7 +12,8 @@ import config
 import numpy as np
 
 try:
-    complete5, open4, open3 = pickle.load(open('./env/cached.pkl', 'rb'))
+    complete5, complete6, open4, open3 = pickle.load(
+        open('./env/cached.pkl', 'rb'))
 except:  # pylint: disable-msg=W0702
     complete5, open4, open3 = 0, 0, 0
     print("run env/cache.py first")
@@ -150,6 +151,8 @@ def check(black, white, x, y, t):  # pylint: disable-msg=R0914
     col = mine & mask_col[y]
     zheng = mine & mask_zheng[x + y]
     fan = mine & mask_fan[14 - x + y]
+    if any(i in complete6 for i in [row, col, zheng, fan]):
+        return -1
     if any(i in complete5 for i in [row, col, zheng, fan]):
         return 1
     # 33 44

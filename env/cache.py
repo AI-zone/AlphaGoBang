@@ -9,6 +9,7 @@ import pickle
 
 """
 # complete 5
+complete6 = defaultdict(list)
 complete5 = defaultdict(list)
 open4 = defaultdict(list)
 open3 = defaultdict(list)
@@ -23,6 +24,8 @@ for x in range(15):
             # why need row_sum & mask_row[x]
             have5 = r & (r << 15) & (r << 30) & (r << 45) & (r << 60)
             have6 = have5 & (r << 75)
+            if have6 > 0:
+                complete6[row_sum].append(([], [], []))
             if (have5 > 0) and (have6 == 0):
                 complete5[row_sum].append(([], [], []))
 
@@ -35,6 +38,8 @@ for x in range(15):
             c = col_sum & mask_col[x]
             have5 = c & (c << 1) & (c << 2) & (c << 3) & (c << 4)
             have6 = have5 & (c << 5)
+            if have6 > 0:
+                complete6[col_sum].append(([], [], []))
             if (have5 > 0) and (have6 == 0):
                 complete5[col_sum].append(([], [], []))
 
@@ -53,6 +58,8 @@ for line_id in range(4, 25):
             f = fan_sum & mask_fan[line_id]
             have5 = f & (f << 16) & (f << 32) & (f << 48) & (f << 64)
             have6 = have5 & (f << 80)
+            if have6 > 0:
+                complete6[fan_sum].append(([], [], []))
             if (have5 > 0) and (have6 == 0):
                 complete5[fan_sum].append(([], [], []))
 
@@ -70,6 +77,8 @@ for line_id in range(4, 25):
             z = zheng_sum & mask_zheng[line_id]
             have5 = z & (z << 14) & (z << 28) & (z << 42) & (z << 56)
             have6 = have5 & (z << 70)
+            if have6 > 0:
+                complete6[zheng_sum].append(([], [], []))
             if (have5 > 0) and (have6 == 0):
                 complete5[zheng_sum].append(([], [], []))
 
@@ -270,4 +279,5 @@ test = sum(gobit[(14 - i, i)] for i in [2, 3, 4, 5])
 show(test, 0)
 test in open4
 len(tmp)
-pickle.dump((complete5, open4, open3), open('./env/cached.pkl', 'wb'))
+pickle.dump((complete5, complete6, open4, open3),
+            open('./env/cached.pkl', 'wb'))
