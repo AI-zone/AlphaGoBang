@@ -5,7 +5,7 @@
 
 import multiprocessing
 import threading
-import os
+import time
 import math
 import zmq
 import msgpack
@@ -13,7 +13,7 @@ import msgpack_numpy
 import numpy as np
 import config
 
-from ai.mcts_policy import Tree
+from ai.mcts_policy import Tree, move_state
 from env.gobang import axis, legal, show_pi, toind, posswap
 msgpack_numpy.patch()
 
@@ -58,10 +58,25 @@ class Player(multiprocessing.Process):
     def _get_action(self, board, pi, gid):
         """sample according to pi(with config.TENPERATURE)"""
         if (gid == 0) and self.showlog:
-            print('player:%s, age:%d, IQ:%d, learning:%d' %
-                  (self.player_id, self.age, len(self.tree.nodes),
-                   self.tree.to_evaluate.qsize()))
-            show_pi(board[1], board[2], pi)
+            print(
+                'player:%s, age:%d, IQ:%d, learning:%d' %
+                (self.player_id, self.age, len(self.tree.nodes),
+                 self.tree.to_evaluate.qsize()),
+                end='\t')
+            if board[0] % 2 == 0:
+                print("\033[%d;%d;%dm BLACK \033[0m" % (0, 37, 41))
+            else:
+                print("\033[%d;%d;%dm WHITE \033[0m" % (0, 37, 42))
+            values = np.zeros(225)
+            Q = np.zeros(225)
+            for move in range(225):
+                s_next, _ = move_state(*board, move, False)
+                if s_next in self.tree.nodes:
+                    values[move] = self.tree.nodes[s_next].v
+                    Q[move] = self.tree.nodes[s_next].W / self.tree.nodes[
+                        s_next].N
+            show_pi(board[1], board[2], pi,
+                    self.tree.nodes[(board[1], board[2])].p, values, Q)
         if config.TEMPERATURE == 0:
             ind = np.argmax(pi)
             return axis(ind)
@@ -163,12 +178,20 @@ class Player(multiprocessing.Process):
             # print(self.tree.to_evaluate.qsize())
             batch = []
             states = []
-            for _ in range(config.INFERENCE_BATCHSIZE):
+            colors = []
+            size = self.tree.to_evaluate.qsize()
+            if size > config.INFERENCE_BATCHSIZE:
+                size = config.INFERENCE_BATCHSIZE
+            elif size == 0:
+                time.sleep(0.001)
+                continue
+            for _ in range(size):
                 t, black, white = self.tree.to_evaluate.get()
                 mine, yours = posswap(t, black, white)
                 color = t % 2
                 batch.append((str(mine), str(yours), color))
                 states.append((black, white))
+                colors.append(color)
             socket.send(msgpack.dumps((batch, self.player_id)))
             result = msgpack.loads(socket.recv())
             assert len(states) == len(result[0])
@@ -176,7 +199,10 @@ class Player(multiprocessing.Process):
             for ind, state in enumerate(states):
                 with self.lock:
                     self.tree.nodes[state].p = result[0][ind]
-                    self.tree.nodes[state].v = result[1][ind]
+                    if colors[ind] == 0:
+                        self.tree.nodes[state].v = result[1][ind]
+                    else:
+                        self.tree.nodes[state].v = -result[1][ind]
                     self.tree.nodes[state].updated = True
 
     def run(self):

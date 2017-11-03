@@ -70,18 +70,23 @@ class Tree():
 
     def QnU(self, t, s_t, a, begin):
         """s_t: (black, white), a: action in [0, 224]. begin: global_step"""
-        if begin % 2 == 0:
+        if t % 2 == 0:
             swap = 1
         else:
             swap = -1
         next_s, _ = move_state(t, *s_t, a, False)
+        if t == begin:
+            prior = config.ROOT_EXPLORE * np.random.random() + (
+                1 - config.ROOT_EXPLORE) * self.nodes[s_t].p[a]
+        else:
+            prior = self.nodes[s_t].p[a]
         if next_s in self.nodes:
             Q = self.nodes[next_s].W / (self.nodes[next_s].N + 1)
-            U = self.nodes[s_t].p[a] * math.sqrt(self.nodes[s_t].N) / (
+            U = prior * math.sqrt(self.nodes[s_t].N) / (
                 1 + self.nodes[next_s].N)
         else:
             Q = 0
-            U = self.nodes[s_t].p[a] * math.sqrt(self.nodes[s_t].N)
+            U = prior * math.sqrt(self.nodes[s_t].N)
         return swap * Q + U * config.VISIT_WEIGHT
 
     def _simulate(self, begin, simu_step, s_t, isleaf=0):

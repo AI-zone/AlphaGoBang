@@ -217,7 +217,7 @@ def show_np(mat):
         print("")
 
 
-def show_pi(black, white, pi):  # pylint: disable-msg=R0912
+def show_pi(black, white, pi, p, values, Q):  # pylint: disable-msg=R0912
     """Plot the policy pi, along with board.
     Args:
         black, white: binary board int.
@@ -225,6 +225,14 @@ def show_pi(black, white, pi):  # pylint: disable-msg=R0912
     """
     pi = pi / sum(pi) * 100
     pi = pi.reshape((15, 15)).T
+    p = p / sum(p) * 100
+    p = p.reshape((15, 15)).T
+    values = values * 100
+    values = np.clip(values, -99, 99)
+    values = values.reshape((15, 15)).T
+    Q = Q * 100
+    Q = np.clip(Q, -99, 99)
+    Q = Q.reshape((15, 15)).T
     max_ind = axis(np.argmax(pi))
     sx, sy = max_ind[1], max_ind[0]
     num_stone = 0
@@ -253,6 +261,58 @@ def show_pi(black, white, pi):  # pylint: disable-msg=R0912
                 print("%2d" % int(pi[x, y]), end='')
             elif pi[x, y] > 0:
                 print("--", end='')
+            else:
+                print("  ", end='')
+        print("      ", end='')
+        for y in range(15):
+            if (x == 7) and (y == 7):
+                print("\033[%d;%d;%dm**\033[0m" % (0, 33, 41), end='')
+            elif black & gobit[(x, y)]:
+                print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
+            elif white & gobit[(x, y)]:
+                print("\033[%d;%d;%dm  \033[0m" % (0, 32, 42), end='')
+            elif int(p[x, y]) >= 1:
+                print("%2d" % int(p[x, y]), end='')
+            elif p[x, y] > 0.005:
+                print("--", end='')
+            else:
+                print("  ", end='')
+        print("      ", end='')
+        for y in range(15):
+            if (x == 7) and (y == 7):
+                print("\033[%d;%d;%dm**\033[0m" % (0, 33, 41), end='')
+            elif black & gobit[(x, y)]:
+                print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
+            elif white & gobit[(x, y)]:
+                print("\033[%d;%d;%dm  \033[0m" % (0, 32, 42), end='')
+            elif int(values[x, y]) > 0:
+                print(
+                    "\033[%d;%d;%dm%2d\033[0m" % (0, 33, 40,
+                                                  int(values[x, y])),
+                    end='')
+            elif int(values[x, y]) < 0:
+                print(
+                    "\033[%d;%d;%dm%2d\033[0m" % (0, 34, 40,
+                                                  int(-values[x, y])),
+                    end='')
+            else:
+                print("  ", end='')
+        print("      ", end='')
+        for y in range(15):
+            if (x == 7) and (y == 7):
+                print("\033[%d;%d;%dm**\033[0m" % (0, 33, 41), end='')
+            elif black & gobit[(x, y)]:
+                print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
+            elif white & gobit[(x, y)]:
+                print("\033[%d;%d;%dm  \033[0m" % (0, 32, 42), end='')
+            elif int(Q[x, y]) > 0:
+                print(
+                    "\033[%d;%d;%dm%2d\033[0m" % (0, 33, 40, int(Q[x, y])),
+                    end='')
+            elif int(Q[x, y]) < 0:
+                print(
+                    "\033[%d;%d;%dm%2d\033[0m" % (0, 34, 40, int(-Q[x, y])),
+                    end='')
             else:
                 print("  ", end='')
         print("")
