@@ -285,12 +285,12 @@ def show_pi(black, white, pi, p, values, Q):  # pylint: disable-msg=R0912
                 print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
             elif white & gobit[(x, y)]:
                 print("\033[%d;%d;%dm  \033[0m" % (0, 32, 42), end='')
-            elif int(values[x, y]) > 0:
+            elif values[x, y] > 0.1:
                 print(
                     "\033[%d;%d;%dm%2d\033[0m" % (0, 33, 40,
                                                   int(values[x, y])),
                     end='')
-            elif int(values[x, y]) < 0:
+            elif values[x, y] < -0.1:
                 print(
                     "\033[%d;%d;%dm%2d\033[0m" % (0, 34, 40,
                                                   int(-values[x, y])),
@@ -305,11 +305,11 @@ def show_pi(black, white, pi, p, values, Q):  # pylint: disable-msg=R0912
                 print("\033[%d;%d;%dm  \033[0m" % (0, 31, 41), end='')
             elif white & gobit[(x, y)]:
                 print("\033[%d;%d;%dm  \033[0m" % (0, 32, 42), end='')
-            elif int(Q[x, y]) > 0:
+            elif Q[x, y] > 0.1:
                 print(
                     "\033[%d;%d;%dm%2d\033[0m" % (0, 33, 40, int(Q[x, y])),
                     end='')
-            elif int(Q[x, y]) < 0:
+            elif Q[x, y] < -0.1:
                 print(
                     "\033[%d;%d;%dm%2d\033[0m" % (0, 34, 40, int(-Q[x, y])),
                     end='')
