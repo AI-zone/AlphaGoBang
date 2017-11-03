@@ -24,7 +24,7 @@ for (ai1, ai2) in itertools.combinations_with_replacement(ai_version, 2):
 
 # reduce self-AI play
 for ai in ai_version:
-    schedule[(ai, ai)] = config.NUMPARALELL * 2
+    schedule[(ai, ai)] = config.NUMPARALELL
 
 for ai in ai_version:
     ai_processes[ai] = multiprocessing.Process(target=start_ai, args=(ai, ))
