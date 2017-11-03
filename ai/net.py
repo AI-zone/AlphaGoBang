@@ -114,7 +114,7 @@ def model_fn(features, labels, mode, params, config):
     entropy = tf.reduce_mean(-tf.reduce_sum(probs * tf.log(probs), 1))
 
     def _train_op_fn(loss):
-        loss += 0.01 * entropy  # add regularization
+        loss += config.ENTROPY_REGUL * entropy  # add regularization
         optimizer = tf.train.AdamOptimizer(params['learning_rate'])
         # optimizer = tf.train.ProximalAdagradOptimizer(
         #     learning_rate=params['learning_rate'],
