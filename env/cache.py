@@ -1,8 +1,13 @@
-from env.gobang import gobit, axis, toind, mask_col, mask_row, mask_fan, show, mask_zheng
+"""make cached hash table for fast checking. """
+
+# pylint: disable-msg=C0103
+# pylint: disable-msg=E1101
+# pylint: disable-msg=E0632
+
 import itertools
-from collections import defaultdict
-import random
 import pickle
+from collections import defaultdict
+from env.gobang import gobit, axis, toind, mask_col, mask_row, mask_fan, show, mask_zheng
 """
 判断依据。刚刚下完的人，自己形成了2个活3或者2个活4，则输.
 这个程序用来缓存给check做判断.
@@ -277,7 +282,6 @@ print("complete5")
 tmp = list(open4.keys())
 test = sum(gobit[(14 - i, i)] for i in [2, 3, 4, 5])
 show(test, 0)
-test in open4
 len(tmp)
 pickle.dump((complete5, complete6, open4, open3),
             open('./env/cached.pkl', 'wb'))

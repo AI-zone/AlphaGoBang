@@ -28,11 +28,7 @@ def _recv_server(socket):
     return content
 
 
-def _send_server(socket, content):
-    socket.send(msgpack.dumps(content))
-
-
-class Player(multiprocessing.Process):
+class Player(multiprocessing.Process):  # pylint: disable-msg=R0902
     """Player.
     Properties:
         tree:   shared MCTS
@@ -164,13 +160,12 @@ class Player(multiprocessing.Process):
                 board[1], board[2], color,
                 toind(*action), 0
             ]
-            _send_server(socket, (*action, gid))
+            socket.send(msgpack.dumps((*action, gid)))
 
     def evaluate_node(self):
         """update node p, v in tree"""
         # p, v = np.random.random(225).astype(np.float16), np.random.random()
-        context = zmq.Context()
-        socket = context.socket(zmq.DEALER)
+        socket = zmq.Context().socket(zmq.DEALER)
         socket.setsockopt_string(zmq.IDENTITY, self.player_id)
         socket.connect('ipc://./tmp/oracle_%s' % self.tree.model_name)
         print('start to evaluate', self.tree.model_name)
@@ -188,10 +183,9 @@ class Player(multiprocessing.Process):
             for _ in range(size):
                 t, black, white = self.tree.to_evaluate.get()
                 mine, yours = posswap(t, black, white)
-                color = t % 2
-                batch.append((str(mine), str(yours), color))
+                batch.append((str(mine), str(yours), t % 2))
                 states.append((black, white))
-                colors.append(color)
+                colors.append(t % 2)
             socket.send(msgpack.dumps((batch, self.player_id)))
             result = msgpack.loads(socket.recv())
             assert len(states) == len(result[0])
