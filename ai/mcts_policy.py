@@ -41,7 +41,7 @@ def _make_mask(action):
     return mask
 
 
-class Node():
+class Node():  # pylint: disable-msg=R0903
     """state node."""
     __slots__ = ['t', 'N', 'W', 'p', 'v', 'mask', 'updated']
 

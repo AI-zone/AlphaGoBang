@@ -1,3 +1,4 @@
+"""Hyper params."""
 # @Author: chenyu
 # @Date:   20_Oct_2017
 # @Email:  yu.chen@pku.edu.cn
@@ -6,8 +7,7 @@
 # @Last modified time: 21_Oct_2017
 
 import multiprocessing
-import names
-import os
+
 NUM_CPU = multiprocessing.cpu_count()
 
 MODE = 1  # 1: pure self play  2: between AI
