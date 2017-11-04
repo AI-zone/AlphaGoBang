@@ -2,6 +2,9 @@
 # pylint: disable-msg=W0621
 # pylint: disable-msg=E1101
 # pylint: disable-msg=E0632
+# pylint: disable-msg=R0912
+# pylint: disable-msg=R0913
+# pylint: disable-msg=R0915
 """
 Created on Sat Aug  5 22:04:19 2017
 
@@ -217,7 +220,7 @@ def show_np(mat):
         print("")
 
 
-def show_pi(black, white, pi, p, values, Q):  # pylint: disable-msg=R0912
+def show_pi(black, white, pi, p, values, Q):
     """Plot the policy pi, along with board.
     Args:
         black, white: binary board int.

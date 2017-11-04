@@ -9,9 +9,9 @@
 import multiprocessing
 
 
-def TEMPERATURE(t):
+def TEMPERATURE(t):  # pylint: disable-msg=C0103
     """explore."""
-    if t < 14:
+    if t < 8:
         return 1
     return 0
 
