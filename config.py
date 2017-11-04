@@ -22,7 +22,7 @@ MODE = 1  # 1: pure self play  2: between AI
 if NUM_CPU < 10:
     NUMPARALELL = 2
 else:
-    NUMPARALELL = 10
+    NUMPARALELL = 8
 
 NUM_SIMULATIONS = 400
 REBORN = 50000
