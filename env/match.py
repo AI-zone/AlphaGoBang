@@ -18,7 +18,7 @@ ai_processes = {}
 server_threads = {}
 player_processes = {}
 ai_version = os.listdir('/data/gobang/aipath')
-ai_version = ['Alexander-0006']
+ai_version = ['Ralston-0007']
 for (ai1, ai2) in itertools.combinations_with_replacement(ai_version, 2):
     schedule[(ai1, ai2)] = 0
 
