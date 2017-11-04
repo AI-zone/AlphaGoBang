@@ -81,7 +81,10 @@ class Tree():
         else:
             prior = self.nodes[s_t].p[a]
         if next_s in self.nodes:
-            Q = self.nodes[next_s].W / (self.nodes[next_s].N + 1)
+            if abs(self.nodes[next_s].W) > 0.05:
+                Q = self.nodes[next_s].W / (self.nodes[next_s].N + 1)
+            else:
+                Q = self.nodes[next_s].v
             U = prior * math.sqrt(self.nodes[s_t].N) / (
                 1 + self.nodes[next_s].N)
         else:
@@ -116,7 +119,7 @@ class Tree():
                     return -1
 
         if simu_step >= begin + config.L:
-            return self.nodes[s_t].v
+            return cur.v
         # 往下走
         empty = legal(s_t[0], s_t[1], simu_step)
         empty = [a for a in empty if gobit[axis(a)] & cur.mask]
@@ -162,6 +165,8 @@ class Tree():
                     return pi
         while self.nodes[s_t].N < config.NUM_SIMULATIONS:
             self._simulate(t, t, s_t)
+            if s_t not in self.nodes:
+                break
         empty = legal(s_t[0], s_t[1], t)
         pi = np.zeros(225)
         for a in empty:

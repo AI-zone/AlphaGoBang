@@ -224,6 +224,7 @@ def show_pi(black, white, pi, p, values, Q):  # pylint: disable-msg=R0912
         pi: numpy array of length 225.
     """
     pi = pi / sum(pi) * 100
+    pi = np.clip(pi, -99, 99)
     pi = pi.reshape((15, 15)).T
     p = p / sum(p) * 100
     p = p.reshape((15, 15)).T

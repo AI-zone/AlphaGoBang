@@ -147,7 +147,7 @@ class Player(multiprocessing.Process):  # pylint: disable-msg=R0902
                           bytes('%s-%d' % (self.player_id, gid), 'utf8'))
         socket.connect('ipc://./tmp/server_' + str(self.server_id))
         socket.send(msgpack.dumps(self.player_id))
-        while True:
+        for _ in range(config.REBORN):
             board = _recv_server(socket)
             if str(board[0]) in 'BWJE':
                 with self.lock:
