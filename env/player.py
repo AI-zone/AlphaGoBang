@@ -69,20 +69,21 @@ class Player(multiprocessing.Process):  # pylint: disable-msg=R0902
                 s_next, _ = move_state(*board, move, False)
                 if s_next in self.tree.nodes:
                     values[move] = self.tree.nodes[s_next].v
-                    Q[move] = self.tree.nodes[s_next].W / self.tree.nodes[
-                        s_next].N
+                    Q[move] = self.tree.nodes[s_next].W / (
+                        1 + self.tree.nodes[s_next].N)
             show_pi(board[1], board[2], pi,
                     self.tree.nodes[(board[1], board[2])].p, values, Q)
-        if config.TEMPERATURE == 0:
+        if config.TEMPERATURE(board[0]) == 0:
             ind = np.argmax(pi)
             return axis(ind)
         empty = legal(board[1], board[2], board[0])
         temperature_pi = [
-            math.pow(pi[i], 1 / config.TEMPERATURE) for i in empty
+            math.pow(pi[i], 1 / config.TEMPERATURE(board[0])) for i in empty
         ]
         sum_pi = sum(temperature_pi)
         probs = [
-            math.pow(pi[i], 1 / config.TEMPERATURE) / sum_pi for i in empty
+            math.pow(pi[i], 1 / config.TEMPERATURE(board[0])) / sum_pi
+            for i in empty
         ]
         ind = np.random.choice(empty, p=probs)
         return axis(ind)

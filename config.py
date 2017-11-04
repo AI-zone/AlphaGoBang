@@ -8,6 +8,14 @@
 
 import multiprocessing
 
+
+def TEMPERATURE(t):
+    """explore."""
+    if t < 14:
+        return 1
+    return 0
+
+
 NUM_CPU = multiprocessing.cpu_count()
 
 MODE = 1  # 1: pure self play  2: between AI
@@ -16,11 +24,11 @@ if NUM_CPU < 10:
 else:
     NUMPARALELL = 10
 
-NUM_SIMULATIONS = 600
+NUM_SIMULATIONS = 400
 REBORN = 50000
 INFERENCE_BATCHSIZE = 256
 GAMEPARALELL = 50
-TEMPERATURE = 0.1
+
 VISIT_WEIGHT = 0.05
 UPDATE_DELAY = 0.01  # epsilon greedy in MCTS
 SIZE = 225
